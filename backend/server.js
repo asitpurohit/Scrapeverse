@@ -407,7 +407,9 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static frontend assets
-app.use(express.static(path.join(__dirname, 'public')));
+// Let the explicit route below control `/` instead of automatically serving
+// public/index.html before the marketing homepage handler can run.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // ─────────────────────────────────────────────
 // 1. PUBLIC AGGREGATOR CATALOG API
