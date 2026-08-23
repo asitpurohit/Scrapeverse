@@ -1,6 +1,7 @@
 require('dotenv').config();
 const https = require('https');
 const { exec, execFile } = require('child_process');
+const path = require('path');
 
 const API_KEY = process.env.BRIGHTDATA_API_KEY || '';
 const LLM_API_KEY = process.env.LLM_API_KEY || '';
@@ -9,6 +10,7 @@ const LLM_ENGINE_LABEL = (LLM_PROVIDER.toLowerCase() === 'opencode' || (process.
   ? 'OpenCode'
   : (LLM_PROVIDER.toLowerCase() === 'gemini' ? 'Gemini' : LLM_PROVIDER);
 const MAX_REASONABLE_COLLECTOR_MONEY = 100_000_000;
+const BRIGHTDATA_CLI = process.env.BRIGHTDATA_CLI_PATH || path.join(__dirname, 'node_modules', '.bin', 'brightdata');
 
 // ─────────────────────────────────────────────
 // 1. BRIGHT DATA SCRAPER STUDIO ENGINE
@@ -37,7 +39,7 @@ const MAX_REASONABLE_COLLECTOR_MONEY = 100_000_000;
 function runScraperViaCli(collectorId, url) {
   return new Promise((resolve) => {
     if (!API_KEY || !collectorId) return resolve(null);
-    const cmd = `npx -y @brightdata/cli scraper run -k ${API_KEY} ${collectorId} "${url}" --json`;
+    const cmd = `${BRIGHTDATA_CLI} scraper run -k ${API_KEY} ${collectorId} "${url}" --json`;
     console.log(`[Bright Data Scraper Studio] Executing collector "${collectorId}" on ${url}...`);
 
     const resolveWithRawEvidence = (parsed) => {
@@ -147,13 +149,13 @@ function createStoreCollector(url, domain, platform = 'shopify') {
     const safePlatform = String(platform || 'shopify').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
     const name = `scrapeverse-${safeDomain}-${safePlatform}-pdp`;
     const args = [
-      '-y', '@brightdata/cli', 'scraper', 'create', '-k', API_KEY,
+      'scraper', 'create', '-k', API_KEY,
       url, STORE_PRODUCT_COLLECTOR_PROMPT,
       '--name', name, '--json', '--timeout', '900'
     ];
 
     console.log(`[Bright Data Scraper Studio] Creating store collector for ${domain} (${platform})...`);
-    execFile('npx', args, { maxBuffer: 20 * 1024 * 1024, timeout: 15 * 60 * 1000 }, (error, stdout, stderr) => {
+    execFile(BRIGHTDATA_CLI, args, { maxBuffer: 20 * 1024 * 1024, timeout: 15 * 60 * 1000 }, (error, stdout, stderr) => {
       const result = parseCollectorCreateOutput(stdout);
       if (result?.collector_id && result.status !== 'ai_trigger_failed') {
         console.log('[Bright Data Scraper Studio] CREATE_RESULT', JSON.stringify({
@@ -177,7 +179,7 @@ function scrapeWithBrightDataUnlocker(targetUrl, { rawOnly = false } = {}) {
     if (!API_KEY) {
       return reject(new Error('BRIGHTDATA_API_KEY is not configured in .env'));
     }
-    const cmd = `npx -y @brightdata/cli scrape -k ${API_KEY} "${targetUrl}" --format json`;
+    const cmd = `${BRIGHTDATA_CLI} scrape -k ${API_KEY} "${targetUrl}" --format json`;
     console.log(`[Bright Data Web Unlocker] Proxying request through Bright Data zone for ${targetUrl}...`);
     
     exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 35000 }, (error, stdout, stderr) => {
@@ -527,7 +529,7 @@ function parseBrightDataCliJson(stdout = '') {
 
 function runBrightDataCli(args, timeout = 30000) {
   return new Promise((resolve) => {
-    execFile('npx', args, { maxBuffer: 10 * 1024 * 1024, timeout }, (error, stdout, stderr) => {
+    execFile(BRIGHTDATA_CLI, args, { maxBuffer: 10 * 1024 * 1024, timeout }, (error, stdout, stderr) => {
       if (error) {
         return resolve({
           success: false,
@@ -589,7 +591,7 @@ async function healStoreCollector(collectorId, missingFields = [], targetUrl = '
 
   console.log(`[Bright Data Self-Heal] Healing collector "${collectorId}" for ${fields}${safeFailureDetail ? ` after: ${safeFailureDetail.replace(/\s+/g, ' ').slice(0, 180)}` : ''}...`);
   const result = await runBrightDataCli([
-    '-p', '@brightdata/cli', 'brightdata', 'scraper', 'heal', collectorId, prompt,
+    'scraper', 'heal', collectorId, prompt,
     ...(targetUrl ? ['--url', targetUrl] : []),
     '--auto-approve',
     '--timeout', '900',
@@ -616,7 +618,7 @@ async function approveStoreCollector(collectorId, targetUrl = '') {
     return { success: false, collector_id: collectorId, error: 'Bright Data credentials or collector ID are missing' };
   }
   const result = await runBrightDataCli([
-    '-p', '@brightdata/cli', 'brightdata', 'scraper', 'approve', collectorId,
+    'scraper', 'approve', collectorId,
     ...(targetUrl ? ['--url', targetUrl] : []),
     '--timeout', '900',
     '--json'
@@ -1420,7 +1422,7 @@ function searchWithBrightData(query) {
   return new Promise((resolve) => {
     if (!API_KEY) return resolve([]);
     const cleanQuery = query.replace(/"/g, '\\"');
-    const cmd = `npx -y @brightdata/cli search -k ${API_KEY} "${cleanQuery}" --json`;
+    const cmd = `${BRIGHTDATA_CLI} search -k ${API_KEY} "${cleanQuery}" --json`;
     console.log(`[Bright Data SERP Search] 🌐 Searching live web discussions for "${cleanQuery}"...`);
 
     exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 25000 }, (error, stdout) => {
