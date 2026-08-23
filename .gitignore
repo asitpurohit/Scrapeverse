@@ -21,6 +21,7 @@ build/
 # Keep the public repository limited to the backend and extension
 demo-site/
 *.md
+!README.md
 
 # Local logs
 *.log
