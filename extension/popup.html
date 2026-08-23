@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ScrapeVerse Companion</title>
+  <style>
+    :root {
+      --sv-bg: #FAF7F2;
+      --sv-card-bg: #ffffff;
+      --sv-surface-soft: #F5F3EF;
+      --sv-surface-strong: #EFECE5;
+      --sv-border: #E5E2DC;
+      --sv-text-main: #222222;
+      --sv-text-body: #3f3f3f;
+      --sv-text-muted: #6a6a6a;
+      --sv-primary: #1E3D2B;
+      --sv-primary-hover: #254A34;
+      --sv-primary-soft: #E5EEE8;
+      --sv-radius-sm: 8px;
+      --sv-radius-md: 14px;
+      --sv-radius-full: 9999px;
+      --sv-shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px 0, rgba(0,0,0,0.08) 0 4px 8px 0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      padding: 16px;
+      background-color: var(--sv-bg);
+      color: var(--sv-text-main);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Poppins', 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--sv-border);
+      margin-bottom: 14px;
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--sv-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: var(--sv-radius-full);
+      background: var(--sv-primary-soft);
+      color: var(--sv-primary);
+      border: 1px solid var(--sv-border);
+    }
+
+    .card {
+      background: var(--sv-card-bg);
+      border: 1px solid var(--sv-border);
+      border-radius: var(--sv-radius-md);
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: var(--sv-shadow-card);
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--sv-text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .status-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sv-primary);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--sv-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--sv-radius-sm);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.2s;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary:hover {
+      background: var(--sv-primary-hover);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      background: var(--sv-card-bg);
+      color: var(--sv-text-main);
+      border: 1px solid var(--sv-border);
+      border-radius: var(--sv-radius-sm);
+      padding: 9px 15px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--sv-primary);
+      color: var(--sv-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">✦ ScrapeVerse</div>
+    <span class="badge">ACTIVE</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Scraper Studio Telemetry</div>
+    <div class="status-text">● Bright Data Self-Healing Engine Online</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Companion Mode</div>
+    <p style="font-size: 12px; color: var(--sv-text-body); line-height: 1.45;">
+      The Top Companion Header & AI Sidebar automatically activate on verified Shopify and WooCommerce DTC stores.
+    </p>
+  </div>
+
+  <a href="http://localhost:3001/admin" target="_blank" class="btn-primary">
+    🛡️ Open Judge & Developer Dashboard ↗
+  </a>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Craftora — Japam Spiritual Jewelry & Mala Marketplace</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Top Announcement Bar -->
+  <header class="top-bar">
+    <div>Free shipping on authentic Japam spiritual jewelry & mala orders above ₹999</div>
+    <div class="top-bar-links">
+      <a href="/admin" target="_blank" style="color:#e5eee8;font-weight:600;">✦ Developer / Judge Dashboard</a>
+      <a href="https://japam.in" target="_blank">Visit Japam Official Store ↗</a>
+      <a href="#">Track Order</a>
+      <a href="#">Help Center</a>
+    </div>
+  </header>
+
+  <!-- Main Navigation Header -->
+  <nav class="main-header">
+    <div class="header-container">
+      <a href="/" class="logo-area">
+        <span class="logo-text">Craftora</span>
+        <span class="logo-tagline">Authentic Spiritual Jewelry & Mala</span>
+      </a>
+
+      <!-- Pill Shaped Search Bar -->
+      <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search for tulsi mala, zodiac rakhi, silver jewelry, bracelets...">
+        <button id="searchBtn" class="search-btn" aria-label="Search">🔍</button>
+      </div>
+
+      <!-- Utilities -->
+      <div class="header-actions">
+        <a href="#brands-section" class="header-action-item">
+          <span class="header-action-icon">📿</span>
+          <span>Japam Store</span>
+        </a>
+        <div class="header-action-item" onclick="showSavedWatchlist()">
+          <span class="header-action-icon">♡</span>
+          <span>Watchlist</span>
+        </div>
+        <div class="header-action-item" onclick="alert('ScrapeVerse connects you directly to official Japam.in storefront via Visit Store ↗.')">
+          <span class="header-action-icon">🛒</span>
+          <span>Cart</span>
+          <span class="cart-badge">1</span>
+        </div>
+        <div class="header-action-item">
+          <span class="header-action-icon">👤</span>
+          <span>Hi, Shopper</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Sub-Nav Category Strip -->
+  <div class="sub-nav">
+    <div class="sub-nav-container" id="categorySubNav">
+      <div class="sub-nav-item active" data-cat="all">☰ All Products</div>
+      <div class="sub-nav-item" data-cat="Necklace">📿 92.5 Sterling Silver Tulsi Mala</div>
+      <div class="sub-nav-item" data-cat="bracelet">✨ Zodiac Rakhi Hampers</div>
+      <div class="sub-nav-item" data-cat="Jewelry">💍 Spiritual Jewelry</div>
+    </div>
+  </div>
+
+  <!-- Hero Banner -->
+  <section class="hero-section">
+    <div class="hero-banner">
+      <div class="hero-content">
+        <h1 class="hero-title">Spiritual stories.<br>Crafted for you.</h1>
+        <p class="hero-subtitle">Discover authentic 92.5 sterling silver tulsi malas and certified zodiac rakhi hampers from Japam with live price tracking & AI insights.</p>
+        <button class="btn-primary" onclick="document.getElementById('trending-section').scrollIntoView({behavior: 'smooth'})">Shop Collection →</button>
+
+        <div class="hero-social-proof">
+          <div class="avatar-stack">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Customer">
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="Customer">
+            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt="Customer">
+          </div>
+          <span class="hero-social-text">Trusted by 24,000+ spiritual seekers</span>
+        </div>
+      </div>
+      <div class="hero-image-wrapper" style="background-image: url('https://cdn.shopify.com/s/files/1/0684/1634/0250/files/1_36271915-d83b-41a1-ac2b-ac1d7f14cc72.jpg');">
+        <div class="crafted-badge">
+          <span>📿</span>
+          <span>100% Certified</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shop by Category Grid -->
+  <section class="section-container">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Shop by Collection</h2>
+        <p class="section-subtitle">Curated authentic spiritual items from Japam</p>
+      </div>
+      <span class="section-link" onclick="filterCategory('all')">View all products →</span>
+    </div>
+    <div class="category-grid" id="categoryCardsGrid" style="grid-template-columns: repeat(4, 1fr);">
+      <!-- Injected via JavaScript -->
+    </div>
+  </section>
+
+  <!-- Featured Brands Carousel -->
+  <section class="section-container" id="brands-section">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Official Brand Store</h2>
+        <p class="section-subtitle">Curated verified artisan brand</p>
+      </div>
+    </div>
+    <div class="brands-grid" id="brandsGrid" style="grid-template-columns: repeat(1, 1fr); max-width: 360px;">
+      <!-- Injected via JavaScript -->
+    </div>
+  </section>
+
+  <!-- Trending Products (With Live Embedded Price Sparklines) -->
+  <section class="section-container" id="trending-section">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title" id="catalogHeading">Trending Products</h2>
+        <p class="section-subtitle">Authentic Japam catalog with real-time price history & AI review insights</p>
+      </div>
+      <span class="section-link" onclick="resetFilters()">Clear Filters ↺</span>
+    </div>
+    <div class="product-grid" id="productsGrid">
+      <!-- Injected via JavaScript -->
+    </div>
+  </section>
+
+  <!-- Trust & Assurance Row -->
+  <section class="trust-bar">
+    <div class="trust-inner">
+      <div class="trust-item">
+        <span class="trust-icon">🔒</span>
+        <div class="trust-text">
+          <h4>100% Direct Store</h4>
+          <p>Buy directly from official Japam store</p>
+        </div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">📉</span>
+        <div class="trust-text">
+          <h4>Verified Price History</h4>
+          <p>Real-time price drop tracking</p>
+        </div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">📿</span>
+        <div class="trust-text">
+          <h4>Certified 92.5 Silver</h4>
+          <p>Authentic hallmark certification</p>
+        </div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🌿</span>
+        <div class="trust-text">
+          <h4>Natural Sacred Beads</h4>
+          <p>Pure Vrindavan Tulsi & Rudraksha</p>
+        </div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">⚡</span>
+        <div class="trust-text">
+          <h4>AI Review Synthesis</h4>
+          <p>Unbiased qualitative review summaries</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="logo-text">Craftora</div>
+        <p style="font-size:12px;color:var(--muted);margin:8px 0 16px;">Authentic Spiritual Jewelry & Mala Marketplace.<br>Powered by ScrapeVerse Universal E-Commerce Companion Engine.</p>
+        <div style="font-size:18px;display:flex;gap:12px;">📷 📘 🐦 📺</div>
+      </div>
+      <div class="footer-col">
+        <h5>For Customers</h5>
+        <ul>
+          <li><a href="https://japam.in" target="_blank">Japam Official Store ↗</a></li>
+          <li><a href="#">Track Order</a></li>
+          <li><a href="#">Price Alert Watchlist</a></li>
+          <li><a href="#">Authenticity Certificate</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Collections</h5>
+        <ul>
+          <li><a href="#" onclick="filterCategory('Necklace')">Silver Tulsi Mala</a></li>
+          <li><a href="#" onclick="filterCategory('bracelet')">Zodiac Rakhi Hampers</a></li>
+          <li><a href="#" onclick="filterCategory('Jewelry')">Spiritual Jewelry</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Developer Portal</h5>
+        <ul>
+          <li><a href="/admin">Developer Dashboard ↗</a></li>
+          <li><a href="/api/health">System Health API</a></li>
+          <li><a href="/api/catalog">Catalog Feed API</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Follow Us</h5>
+        <ul>
+          <li><a href="#">Instagram</a></li>
+          <li><a href="#">Facebook</a></li>
+          <li><a href="#">YouTube</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Companion Tool</h5>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">In-Page Price Tracker Companion for Chrome:</p>
+        <button class="btn-primary" style="padding:8px 16px;font-size:12px;" onclick="window.open('/admin')">✦ Open ScrapeVerse Engine</button>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>© 2026 Craftora Marketplace Pvt. Ltd. All rights reserved. Powered by Bright Data Scraper Studio.</div>
+      <div style="display:flex;gap:20px;">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Cookie Policy</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Quick Insights Modal (AI Reviews & Full Price Graph) -->
+  <div class="modal-overlay" id="insightsModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <div id="modalContent">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

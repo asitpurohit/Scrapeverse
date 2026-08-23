@@ -1,0 +1,25 @@
+# Secrets and local environment files
+.env*
+!.env.example
+**/.env*
+!**/.env.example
+
+# Runtime databases and SQLite journals
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+
+# Dependencies and generated artifacts
+node_modules/
+graphify-out/
+.DS_Store
+coverage/
+dist/
+build/
+
+# Local logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

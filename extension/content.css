@@ -1,0 +1,1341 @@
+/* ─────────────────────────────────────────────
+   CRAFTORA SIMPLIFIED DESIGN SYSTEM
+   Theme: Warm Light Mode (Cream Canvas + Forest Green)
+   Strict Light Mode Only (No Dark Mode)
+   ───────────────────────────────────────────── */
+
+:root {
+  /* Craftora Brand & Accent Tokens */
+  --sv-primary: #1E3D2B;           /* Forest Green */
+  --sv-primary-hover: #254A34;     /* Darker Forest Green */
+  --sv-primary-active: #16301F;    /* Deep Forest Green */
+  --sv-primary-disabled: #5C7563;
+  --sv-primary-soft: #E5EEE8;      /* Light Green Tint */
+  --sv-luxe: #8A5A24;              /* Luxe Bronze/Brown */
+  --sv-plus: #F5A623;              /* Plus Amber / Star Rating */
+  --sv-star: #F5A623;
+
+  /* Surfaces */
+  --sv-bg: #FAF7F2;                /* Warm Cream Canvas */
+  --sv-bg-translucent: rgba(250, 247, 242, 0.98);
+  --sv-surface-soft: #F5F3EF;      /* Soft Surface */
+  --sv-card-bg: #ffffff;           /* True White Card */
+  --sv-surface-card: #ffffff;
+  --sv-surface-strong: #EFECE5;    /* Strong Surface (Avatars, Badges) */
+
+  /* Hairlines & Borders */
+  --sv-border: #E5E2DC;            /* Hairline Border */
+  --sv-border-soft: #EFEDE8;
+  --sv-border-strong: #c1c1c1;
+
+  /* Text & Typography */
+  --sv-text-main: #222222;         /* Ink Text */
+  --sv-text-body: #3f3f3f;         /* Body Text */
+  --sv-text-muted: #6a6a6a;        /* Sub-labels & Muted */
+  --sv-text-muted-soft: #A9A9A9;
+  --sv-on-primary: #ffffff;
+  --sv-danger: #C9301B;            /* Semantic Error / Alert */
+
+  /* Overlays & Elevations */
+  --sv-scrim: rgba(0, 0, 0, 0.45);
+  --sv-shadow: 0 4px 16px rgba(30, 61, 43, 0.08);
+  --sv-shadow-card: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px 0, rgba(0,0,0,0.08) 0 4px 8px 0;
+
+  /* Radius Tokens */
+  --sv-radius-xs: 4px;
+  --sv-radius-sm: 8px;             /* Buttons & Inputs */
+  --sv-radius-md: 14px;            /* Cards */
+  --sv-radius-lg: 20px;
+  --sv-radius-full: 9999px;        /* Pills, Badges & Search Bars */
+}
+
+/* ─────────────────────────────────────────────
+   1. FIXED TOP HORIZONTAL COMPANION BAR
+   ───────────────────────────────────────────── */
+
+#scrapeverse-top-banner {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: auto !important;
+  min-height: 52px !important;
+  background: var(--sv-bg-translucent) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid var(--sv-border) !important;
+  z-index: 2147483640 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Poppins', 'Segoe UI', Roboto, sans-serif !important;
+  color: var(--sv-text-main) !important;
+  box-shadow: var(--sv-shadow) !important;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.55s ease !important;
+  animation: svSlideDown 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+}
+
+.sv-banner-info-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: 42px !important;
+  padding: 0 18px !important;
+  border-bottom: 1px solid var(--sv-border) !important;
+  box-sizing: border-box !important;
+  background: var(--sv-bg-translucent) !important;
+}
+
+.sv-banner-action-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: 42px !important;
+  padding: 0 18px !important;
+  box-sizing: border-box !important;
+  background: rgba(245, 243, 239, 0.75) !important;
+}
+
+.sv-banner-main-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: 42px !important;
+  padding: 0 18px !important;
+  box-sizing: border-box !important;
+}
+
+#scrapeverse-top-banner.hidden {
+  transform: translateY(-100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease !important;
+}
+
+@keyframes svSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Expandable Review & Delivery Panel */
+.sv-expanded-reviews-panel {
+  width: 100% !important;
+  background: var(--sv-surface-card) !important;
+  border-top: 1px solid var(--sv-border) !important;
+  padding: 18px 24px 22px 24px !important;
+  box-sizing: border-box !important;
+  animation: svExpandDown 0.22s ease-out forwards !important;
+  box-shadow: 0 10px 24px rgba(30, 61, 43, 0.06) !important;
+}
+
+@keyframes svExpandDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sv-intel-grid {
+  display: grid !important;
+  grid-template-columns: 1.15fr 1.05fr 1fr !important;
+  gap: 14px !important;
+  width: 100% !important;
+  margin-top: 12px !important;
+  box-sizing: border-box !important;
+}
+
+.sv-intel-card {
+  background: var(--sv-surface-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-sm) !important;
+  padding: 14px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.sv-intel-title {
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  color: var(--sv-primary) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.4px !important;
+  margin-bottom: 8px !important;
+}
+
+.sv-review-btn {
+  background: var(--sv-card-bg) !important;
+  border: 1.5px solid var(--sv-border) !important;
+  color: var(--sv-text-main) !important;
+  padding: 6px 14px !important;
+  border-radius: var(--sv-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  box-shadow: 0 1px 3px rgba(30, 61, 43, 0.08) !important;
+}
+
+.sv-review-btn:hover, .sv-review-btn.active {
+  background: var(--sv-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--sv-primary) !important;
+  box-shadow: 0 3px 8px rgba(30, 61, 43, 0.2) !important;
+  transform: translateY(-1px) !important;
+}
+
+.sv-brand-trust-pill {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--sv-primary) !important;
+  background: var(--sv-primary-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  padding: 4px 12px !important;
+  border-radius: var(--sv-radius-full) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+}
+
+.sv-scam-pill-danger {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  background: var(--sv-danger) !important;
+  border: 1px solid var(--sv-danger) !important;
+  padding: 4px 12px !important;
+  border-radius: var(--sv-radius-full) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  animation: svPulseRed 1.5s infinite !important;
+}
+
+.sv-brand-pill-warning {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: #8a5a00 !important;
+  background: #fff3cd !important;
+  border: 1px solid #e8c766 !important;
+  padding: 4px 12px !important;
+  border-radius: var(--sv-radius-full) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  box-shadow: 0 0 0 2px rgba(232, 199, 102, 0.14) !important;
+}
+
+@keyframes svPulseRed {
+  0% { box-shadow: 0 0 0 0 rgba(201, 48, 27, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(201, 48, 27, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(201, 48, 27, 0); }
+}
+
+.sv-external-source-card {
+  background: var(--sv-surface-card) !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-sm) !important;
+  padding: 10px 12px !important;
+  text-decoration: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  transition: all 0.2s ease !important;
+  box-shadow: var(--sv-shadow-card) !important;
+}
+
+.sv-external-source-card:hover {
+  border-color: var(--sv-primary) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Left: Logo & Product Name */
+.sv-banner-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 220px !important;
+}
+
+.sv-logo {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: var(--sv-primary) !important;
+  letter-spacing: -0.3px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+}
+
+.sv-platform-badge {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  padding: 3px 9px !important;
+  border-radius: var(--sv-radius-full) !important;
+  background: var(--sv-primary-soft) !important;
+  color: var(--sv-primary) !important;
+  border: 1px solid var(--sv-border) !important;
+  white-space: nowrap !important;
+}
+
+.sv-product-name {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--sv-text-main) !important;
+  max-width: 550px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Center: Price Stats & Mini Sparkline */
+.sv-banner-center {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.sv-price-item {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+}
+
+.sv-price-label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--sv-text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.sv-price-val {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: var(--sv-text-main) !important;
+}
+
+.sv-price-drop {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: var(--sv-primary) !important;
+  background: var(--sv-primary-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  padding: 2px 8px !important;
+  border-radius: var(--sv-radius-full) !important;
+}
+
+.sv-sparkline-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: var(--sv-card-bg) !important;
+  padding: 3px 10px !important;
+  border-radius: var(--sv-radius-sm) !important;
+  border: 1px solid var(--sv-border) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: var(--sv-shadow-card) !important;
+}
+
+.sv-sparkline-wrap:hover {
+  border-color: var(--sv-primary) !important;
+  background: var(--sv-primary-soft) !important;
+  transform: translateY(-1px) !important;
+}
+
+.sv-sparkline-svg {
+  width: 72px !important;
+  height: 20px !important;
+  border-radius: var(--sv-radius-sm) !important;
+  background: var(--sv-surface-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  padding: 1px 3px !important;
+  box-sizing: border-box !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* Hover Transparency Tooltip for Buyer Volume */
+.sv-sold-tooltip-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  cursor: help !important;
+}
+
+.sv-sold-tooltip-box {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(-4px) !important;
+  width: 260px !important;
+  box-sizing: border-box !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: normal !important;
+  background: #ffffff !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-sm) !important;
+  padding: 10px 12px !important;
+  box-shadow: 0 8px 24px rgba(30, 61, 43, 0.12) !important;
+  color: var(--sv-text-main) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+  pointer-events: none !important;
+  z-index: 999999999 !important;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease !important;
+  text-align: left !important;
+}
+
+.sv-sold-tooltip-box * {
+  white-space: normal !important;
+  box-sizing: border-box !important;
+}
+
+.sv-sold-tooltip-box::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border-width: 5px !important;
+  border-style: solid !important;
+  border-color: transparent transparent #ffffff transparent !important;
+}
+
+.sv-sold-tooltip-box::before {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border-width: 6px !important;
+  border-style: solid !important;
+  border-color: transparent transparent var(--sv-border) transparent !important;
+}
+
+
+/* Delivery Tooltip Hover */
+.sv-delivery-tooltip-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  cursor: help !important;
+}
+
+.sv-delivery-tooltip-box {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(-4px) !important;
+  width: 280px !important;
+  box-sizing: border-box !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: normal !important;
+  background: #ffffff !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-sm) !important;
+  padding: 10px 12px !important;
+  box-shadow: 0 8px 24px rgba(30, 61, 43, 0.12) !important;
+  color: var(--sv-text-main) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+  pointer-events: none !important;
+  z-index: 999999999 !important;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease !important;
+  text-align: left !important;
+}
+
+.sv-delivery-tooltip-box * {
+  white-space: normal !important;
+  box-sizing: border-box !important;
+}
+
+.sv-delivery-tooltip-box::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border-width: 5px !important;
+  border-style: solid !important;
+  border-color: transparent transparent #ffffff transparent !important;
+}
+
+.sv-delivery-tooltip-box::before {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border-width: 6px !important;
+  border-style: solid !important;
+  border-color: transparent transparent var(--sv-border) transparent !important;
+}
+
+.sv-delivery-tooltip-wrap:hover .sv-delivery-tooltip-box {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+.sv-sold-tooltip-wrap:hover .sv-sold-tooltip-box {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+/* Right: Health Badge, Sidebar CTA & Dismiss Button */
+.sv-banner-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.sv-enrichment-status {
+  display: inline-flex !important;
+  align-items: center !important;
+  max-width: min(340px, 28vw) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--sv-text-muted) !important;
+  background: var(--sv-surface-soft) !important;
+  padding: 4px 10px !important;
+  border-radius: var(--sv-radius-full) !important;
+  border: 1px solid var(--sv-border) !important;
+}
+
+.sv-enrichment-status.sv-status-pending {
+  animation: svStatusPulse 1.4s ease-in-out infinite !important;
+}
+
+.sv-enrichment-status.sv-status-failure {
+  color: var(--sv-danger) !important;
+  background: #fff5f5 !important;
+  border-color: #fecaca !important;
+}
+
+@keyframes svStatusPulse {
+  0%, 100% { opacity: 0.68; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-enrichment-status.sv-status-pending {
+    animation: none !important;
+  }
+}
+
+.sv-active-now-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #176b4b !important;
+  background: #edf8f1 !important;
+  border: 1px solid #b9dfc5 !important;
+  padding: 4px 10px !important;
+  border-radius: var(--sv-radius-full) !important;
+}
+
+.sv-active-now-dot {
+  color: #16a765 !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+#sv-rating-container {
+  flex: 0 0 auto !important;
+  margin-left: 0 !important;
+}
+
+.sv-health-pill {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--sv-primary) !important;
+  background: var(--sv-primary-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  padding: 5px 12px !important;
+  border-radius: var(--sv-radius-full) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+}
+
+.sv-cta-btn {
+  background: var(--sv-primary) !important;
+  color: var(--sv-on-primary) !important;
+  border: 1px solid var(--sv-primary-hover) !important;
+  border-radius: var(--sv-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 7px 14px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  box-shadow: 0 2px 6px rgba(30, 61, 43, 0.15) !important;
+  text-decoration: none !important;
+}
+
+.sv-cta-btn:hover {
+  background: var(--sv-primary-hover) !important;
+  transform: translateY(-1px) !important;
+}
+
+.sv-alert-btn {
+  background: var(--sv-surface-soft) !important;
+  color: var(--sv-text-main) !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 6px 12px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+}
+
+/* Visible explanations for injected action buttons. Native title tooltips
+   are inconsistent for extension content and disabled controls. */
+[data-sv-tooltip] {
+  position: relative !important;
+}
+
+[data-sv-tooltip]::after {
+  content: attr(data-sv-tooltip);
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  width: 230px !important;
+  padding: 8px 10px !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-sm) !important;
+  background: var(--sv-surface-card) !important;
+  color: var(--sv-text-main) !important;
+  box-shadow: var(--sv-shadow-card) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+  text-align: left !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(-4px) !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease !important;
+  z-index: 2147483647 !important;
+}
+
+[data-sv-tooltip]:hover::after,
+[data-sv-tooltip]:focus-visible::after {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+}
+
+.sv-alert-btn:hover, .sv-alert-btn.active {
+  background: var(--sv-primary-soft) !important;
+  color: var(--sv-primary) !important;
+  border-color: var(--sv-primary) !important;
+}
+
+.sv-alert-popover {
+  position: absolute !important;
+  top: 86px !important;
+  right: 180px !important;
+  background: var(--sv-surface-card) !important;
+  border: 1px solid var(--sv-primary) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+  border-radius: var(--sv-radius-md) !important;
+  padding: 16px !important;
+  width: 290px !important;
+  z-index: 2147483647 !important;
+  animation: svFadeIn 0.2s ease forwards !important;
+  color: var(--sv-text-main) !important;
+}
+
+.sv-close-bar-btn {
+  background: var(--sv-surface-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  color: var(--sv-text-muted) !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: var(--sv-radius-full) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  opacity: 0.75 !important;
+}
+
+.sv-close-bar-btn:hover {
+  background: #FFF5F5 !important;
+  color: var(--sv-danger) !important;
+  border-color: var(--sv-danger) !important;
+  opacity: 1 !important;
+  transform: scale(1.08) !important;
+}
+
+/* ─────────────────────────────────────────────
+   2. SLIDE-IN AI SIDEBAR DRAWER
+   ───────────────────────────────────────────── */
+
+.scrapeverse-sidebar-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: var(--sv-scrim) !important;
+  z-index: 2147483645 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  will-change: opacity !important;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.scrapeverse-sidebar-backdrop.active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.scrapeverse-sidebar-drawer {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 440px !important;
+  max-width: 90vw !important;
+  height: 100vh !important;
+  background: var(--sv-bg) !important;
+  border-left: 1px solid var(--sv-border) !important;
+  box-shadow: -8px 0 32px rgba(30, 61, 43, 0.12) !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  transform: translate3d(100%, 0, 0) !important;
+  will-change: transform !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Poppins', 'Segoe UI', Roboto, sans-serif !important;
+  color: var(--sv-text-main) !important;
+}
+
+.scrapeverse-sidebar-drawer.active {
+  transform: translate3d(0, 0, 0) !important;
+}
+
+/* Scope & Filter Chips in Similar Products */
+.sv-scope-toggle-bar {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  background: var(--sv-surface-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-full) !important;
+  padding: 3px !important;
+  margin: 0 0 12px 0 !important;
+  gap: 4px !important;
+}
+
+.sv-scope-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 7px 8px !important;
+  border-radius: var(--sv-radius-full) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--sv-text-muted) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-align: center !important;
+  white-space: normal !important;
+  line-height: 1.25 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.sv-scope-btn.active {
+  background: var(--sv-surface-card) !important;
+  color: var(--sv-primary) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+  font-weight: 700 !important;
+}
+
+.sv-filters-controls-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+.sv-filter-control-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+.sv-control-label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: var(--sv-text-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.sv-select-input {
+  background: var(--sv-surface-card) !important;
+  border: 1px solid var(--sv-border) !important;
+  color: var(--sv-text-main) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 8px 10px !important;
+  border-radius: var(--sv-radius-sm) !important;
+  outline: none !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease !important;
+}
+
+.sv-select-input:focus, .sv-select-input:hover {
+  border-color: var(--sv-primary) !important;
+}
+
+.sv-filter-chip {
+  background: var(--sv-surface-card) !important;
+  border: 1px solid var(--sv-border) !important;
+  color: var(--sv-text-body) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 6px 14px !important;
+  border-radius: var(--sv-radius-full) !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+
+.sv-filter-chip:hover {
+  border-color: var(--sv-primary) !important;
+  color: var(--sv-primary) !important;
+}
+
+.sv-filter-chip.active {
+  background: var(--sv-primary-soft) !important;
+  border-color: var(--sv-primary) !important;
+  color: var(--sv-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Sidebar Header */
+.scrapeverse-sidebar-header {
+  padding: 18px 20px !important;
+  background: var(--sv-surface-card) !important;
+  border-bottom: 1px solid var(--sv-border) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.scrapeverse-sidebar-header-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: var(--sv-primary) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.scrapeverse-sidebar-close {
+  background: var(--sv-surface-soft) !important;
+  border: 1px solid var(--sv-border) !important;
+  color: var(--sv-text-muted) !important;
+  font-size: 18px !important;
+  cursor: pointer !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: var(--sv-radius-full) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s !important;
+}
+
+.scrapeverse-sidebar-close:hover {
+  background: var(--sv-surface-strong) !important;
+  color: var(--sv-text-main) !important;
+}
+
+/* Unified Scrollable Drawer Body */
+.scrapeverse-sidebar-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 18px 20px 30px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  scrollbar-width: thin !important;
+}
+
+.scrapeverse-sidebar-body::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+.scrapeverse-sidebar-body::-webkit-scrollbar-thumb {
+  background: var(--sv-border) !important;
+  border-radius: var(--sv-radius-full) !important;
+}
+
+.scrapeverse-chart-card, .scrapeverse-section-card, .scrapeverse-review-card {
+  background: var(--sv-surface-card) !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-md) !important;
+  padding: 18px !important;
+  box-shadow: var(--sv-shadow-card) !important;
+}
+
+.scrapeverse-product-heading-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--sv-text-main) !important;
+  line-height: 1.3 !important;
+}
+
+.scrapeverse-product-heading-price {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: var(--sv-primary) !important;
+}
+
+.scrapeverse-highlight-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  font-size: 13px !important;
+  color: var(--sv-text-body) !important;
+  margin-top: 6px !important;
+}
+
+.scrapeverse-highlight-item span:first-child {
+  color: var(--sv-primary) !important;
+}
+
+/* Similar Products Grid inside Sidebar */
+.scrapeverse-product-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-top: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.scrapeverse-product-card {
+  background: var(--sv-surface-card) !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-md) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  transition: all 0.2s ease !important;
+  padding: 10px !important;
+  text-decoration: none !important;
+  color: var(--sv-text-main) !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  box-shadow: var(--sv-shadow-card) !important;
+}
+
+.scrapeverse-product-card:hover {
+  transform: translateY(-2px) !important;
+  border-color: var(--sv-primary) !important;
+}
+
+.scrapeverse-product-img {
+  width: 100% !important;
+  height: 100px !important;
+  max-height: 100px !important;
+  min-height: 100px !important;
+  object-fit: cover !important;
+  border-radius: var(--sv-radius-sm) !important;
+  margin-bottom: 8px !important;
+  display: block !important;
+  background: var(--sv-surface-soft) !important;
+}
+
+.scrapeverse-product-brand {
+  font-size: 10px !important;
+  color: var(--sv-text-muted) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  margin-bottom: 3px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.scrapeverse-product-title {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--sv-text-main) !important;
+  line-height: 1.35 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  margin-bottom: 6px !important;
+  text-decoration: none !important;
+}
+
+.scrapeverse-product-price-row {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 6px !important;
+  margin-top: auto !important;
+  padding-top: 4px !important;
+}
+
+.scrapeverse-product-price {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--sv-primary) !important;
+}
+
+.scrapeverse-product-compare {
+  font-size: 11px !important;
+  color: var(--sv-text-muted) !important;
+  text-decoration: line-through !important;
+}
+
+.scrapeverse-style-match {
+  font-size: 10px !important;
+  color: var(--sv-primary) !important;
+  font-weight: 700 !important;
+}
+
+.scrapeverse-drop-pill {
+  font-size: 10px !important;
+  background: var(--sv-primary-soft) !important;
+  color: var(--sv-primary) !important;
+  padding: 2px 6px !important;
+  border-radius: var(--sv-radius-xs) !important;
+  font-weight: 700 !important;
+}
+
+/* ─────────────────────────────────────────────
+   5. FLUID TOP BAR RESPONSIVENESS
+   ───────────────────────────────────────────── */
+
+@media (max-width: 1280px) {
+  .sv-product-name {
+    max-width: 180px !important;
+  }
+  .sv-banner-main-row {
+    padding: 0 14px !important;
+  }
+  .sv-banner-left, .sv-banner-right {
+    gap: 8px !important;
+  }
+  .sv-banner-center {
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .sv-sparkline-wrap {
+    display: none !important;
+  }
+  .sv-product-name {
+    max-width: 140px !important;
+  }
+  .sv-alert-btn span:last-child {
+    display: none !important;
+  }
+  .sv-alert-btn {
+    padding: 7px 10px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .sv-price-label {
+    display: none !important;
+  }
+  .sv-product-name {
+    max-width: 110px !important;
+    font-size: 12px !important;
+  }
+  .sv-cta-btn span:first-child {
+    font-size: 12px !important;
+  }
+  .sv-cta-btn {
+    padding: 7px 12px !important;
+  }
+  .sv-intel-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Brand Tooltip Hover */
+.sv-brand-tooltip-box {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(-4px) !important;
+  width: 550px !important;
+  box-sizing: border-box !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  word-break: normal !important;
+  background: #ffffff !important;
+  border: 1px solid var(--sv-border) !important;
+  border-radius: var(--sv-radius-lg) !important;
+  padding: 14px !important;
+  box-shadow: 0 10px 24px rgba(30, 61, 43, 0.12) !important;
+  z-index: 2147483647 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sv-brand-tooltip-box::before {
+  content: "" !important;
+  position: absolute !important;
+  top: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border-width: 6px !important;
+  border-style: solid !important;
+  border-color: transparent transparent var(--sv-border) transparent !important;
+}
+
+.sv-delivery-tooltip-wrap:hover .sv-brand-tooltip-box {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) !important;
+}
+
+/* Customer review hover card: light-theme contrast and readable wrapping */
+.sv-review-tooltip-box {
+  width: min(640px, calc(100vw - 28px)) !important;
+  max-width: calc(100vw - 28px) !important;
+  max-height: min(540px, calc(100vh - 92px)) !important;
+  overflow-y: auto !important;
+  padding: 18px 20px 20px !important;
+  color: var(--sv-text-body) !important;
+  scrollbar-width: thin !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  gap: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-heading {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px 10px !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-title {
+  color: var(--sv-text-main) !important;
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+}
+
+.sv-review-tooltip-box .sv-review-sentiment-pill {
+  color: var(--sv-primary) !important;
+  background: var(--sv-primary-soft) !important;
+  border-color: #b8d2c1 !important;
+  white-space: nowrap !important;
+}
+
+.sv-review-tooltip-box .sv-review-grounded-meta {
+  max-width: 220px !important;
+  color: var(--sv-text-muted) !important;
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+  text-align: right !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-rating {
+  flex-wrap: wrap !important;
+  margin-top: 14px !important;
+  margin-bottom: 12px !important;
+}
+
+.sv-review-tooltip-box #sv-panel-rating-num {
+  font-size: 20px !important;
+  line-height: 1.1 !important;
+}
+
+.sv-review-tooltip-box #sv-panel-review-count {
+  color: var(--sv-text-muted) !important;
+  font-size: 12px !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-summary {
+  background: #f8f7f4 !important;
+  border-color: #dedbd3 !important;
+  padding: 12px 14px !important;
+  margin-bottom: 14px !important;
+}
+
+.sv-review-tooltip-box #sv-panel-summary-text {
+  color: var(--sv-text-body) !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-column {
+  min-width: 0 !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-section-title {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  margin-bottom: 8px !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-section-title-negative {
+  color: #b52d1d !important;
+}
+
+.sv-review-tooltip-box .sv-review-panel-list {
+  gap: 7px !important;
+}
+
+.sv-review-tooltip-box .sv-review-positive-item,
+.sv-review-tooltip-box .sv-review-negative-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  padding: 8px 10px !important;
+  border-radius: var(--sv-radius-sm) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  overflow-wrap: anywhere !important;
+  box-sizing: border-box !important;
+}
+
+.sv-review-tooltip-box .sv-review-positive-item {
+  color: #24563c !important;
+  background: #f0f8f2 !important;
+  border: 1px solid #c9e4d0 !important;
+}
+
+.sv-review-tooltip-box .sv-review-negative-item {
+  color: #8f2f24 !important;
+  background: #fff4f2 !important;
+  border: 1px solid #f1c1ba !important;
+}
+
+.sv-review-tooltip-box .sv-review-positive-icon,
+.sv-review-tooltip-box .sv-review-negative-icon {
+  flex: 0 0 auto !important;
+  font-weight: 800 !important;
+  line-height: 1.45 !important;
+}
+
+.sv-review-tooltip-box .sv-review-positive-icon {
+  color: #0b9f68 !important;
+}
+
+.sv-review-tooltip-box .sv-review-negative-icon {
+  color: #c0392b !important;
+}
+
+@media (max-width: 700px) {
+  .sv-review-tooltip-box .sv-review-panel-header,
+  .sv-review-tooltip-box .sv-review-panel-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sv-review-tooltip-box .sv-review-grounded-meta {
+    max-width: none !important;
+    text-align: left !important;
+  }
+}
+
+/* Keep hover cards inside the viewport when their badge is near an edge. */
+.sv-brand-tooltip-box,
+.sv-review-tooltip-box {
+  max-width: calc(100vw - 28px) !important;
+}
+
+.sv-tooltip-align-left .sv-brand-tooltip-box,
+.sv-tooltip-align-left .sv-delivery-tooltip-box,
+.sv-tooltip-align-left .sv-sold-tooltip-box {
+  left: 0 !important;
+  right: auto !important;
+  transform: translateY(-4px) !important;
+}
+
+.sv-tooltip-align-left:hover .sv-brand-tooltip-box,
+.sv-tooltip-align-left:hover .sv-delivery-tooltip-box,
+.sv-tooltip-align-left:hover .sv-sold-tooltip-box {
+  transform: translateY(0) !important;
+}
+
+.sv-tooltip-align-right .sv-brand-tooltip-box,
+.sv-tooltip-align-right .sv-delivery-tooltip-box,
+.sv-tooltip-align-right .sv-sold-tooltip-box {
+  left: auto !important;
+  right: 0 !important;
+  transform: translateY(-4px) !important;
+}
+
+.sv-tooltip-align-right:hover .sv-brand-tooltip-box,
+.sv-tooltip-align-right:hover .sv-delivery-tooltip-box,
+.sv-tooltip-align-right:hover .sv-sold-tooltip-box {
+  transform: translateY(0) !important;
+}
