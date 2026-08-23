@@ -2806,10 +2806,11 @@ function renderShoppingHistoryPage(req, res) {
 }
 
 app.get('/price-history', renderPriceHistoryPage);
-app.get('/homepage', (req, res) => {
+const renderHomepage = (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'homepage.html'));
-});
-app.get(['/', '/history'], renderShoppingHistoryPage);
+};
+app.get('/', renderHomepage);
+app.get(['/homepage', '/history'], renderShoppingHistoryPage);
 
 // ─────────────────────────────────────────────
 // 2C. DEDICATED BRAND STORE CATALOG & VISITED PRODUCTS (/store-history?domain=...)
