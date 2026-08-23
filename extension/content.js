@@ -5,15 +5,17 @@
 // ─────────────────────────────────────────────
 
 let BACKEND_URL = LOCAL_BACKEND_URL;
-
-(function () {
-  console.log('✦ ScrapeVerse Content Script loaded.');
-
+const backendUrlReady = new Promise((resolve) => {
   chrome.runtime.sendMessage({ type: 'GET_BACKEND_URL' }, (result) => {
     if (!chrome.runtime.lastError && result?.backendUrl) {
       BACKEND_URL = result.backendUrl;
     }
+    resolve(BACKEND_URL);
   });
+});
+
+(function () {
+  console.log('✦ ScrapeVerse Content Script loaded.');
 
   // Public storefront pages are not allowed to call localhost directly by
   // newer Chrome Local Network Access rules. Route backend API traffic through
@@ -2513,8 +2515,8 @@ let BACKEND_URL = LOCAL_BACKEND_URL;
   });
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => backendUrlReady.then(init));
   } else {
-    init();
+    backendUrlReady.then(init);
   }
 })();
