@@ -4,19 +4,27 @@
 // Supports: Shopify, WooCommerce, Magento & Custom DTC Stores
 // ─────────────────────────────────────────────
 
-const BACKEND_URL = 'http://localhost:3001';
+let BACKEND_URL = LOCAL_BACKEND_URL;
 
 (function () {
   console.log('✦ ScrapeVerse Content Script loaded.');
+
+  chrome.runtime.sendMessage({ type: 'GET_BACKEND_URL' }, (result) => {
+    if (!chrome.runtime.lastError && result?.backendUrl) {
+      BACKEND_URL = result.backendUrl;
+    }
+  });
 
   // Public storefront pages are not allowed to call localhost directly by
   // newer Chrome Local Network Access rules. Route backend API traffic through
   // the extension service worker, while keeping the existing API contracts.
   function backendFetch(input, init = {}) {
     const rawUrl = String(input || '');
-    const path = rawUrl.startsWith(BACKEND_URL)
-      ? rawUrl.slice(BACKEND_URL.length) || '/'
-      : rawUrl;
+    const path = rawUrl.startsWith(LOCAL_BACKEND_URL)
+      ? rawUrl.slice(LOCAL_BACKEND_URL.length) || '/'
+      : (rawUrl.startsWith(REMOTE_BACKEND_URL)
+        ? rawUrl.slice(REMOTE_BACKEND_URL.length) || '/'
+        : rawUrl);
 
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage({

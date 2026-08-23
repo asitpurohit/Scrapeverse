@@ -1,8 +1,17 @@
-const BACKEND_URL = 'http://localhost:3001';
-
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/health-status`);
+    const backendUrl = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ type: 'GET_BACKEND_URL' }, (result) => {
+        if (chrome.runtime.lastError || !result?.backendUrl) {
+          reject(new Error(chrome.runtime.lastError?.message || 'Backend unavailable'));
+          return;
+        }
+        resolve(result.backendUrl);
+      });
+    });
+    const dashboardLink = document.getElementById('dashboardLink');
+    if (dashboardLink) dashboardLink.href = `${backendUrl}/admin`;
+    const res = await fetch(`${backendUrl}/api/health-status`);
     const data = await res.json();
     if (data.success) {
       const badge = document.getElementById('popupHealthBadge');

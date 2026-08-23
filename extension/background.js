@@ -1,36 +1,72 @@
 // Background service worker
-const BACKEND_URL = 'http://localhost:3001';
+importScripts('backend-config.js');
+
+let activeBackendUrl = LOCAL_BACKEND_URL;
+let backendResolution;
+
+async function resolveBackendUrl() {
+  if (!backendResolution) {
+    backendResolution = (async () => {
+      for (const candidate of [LOCAL_BACKEND_URL, REMOTE_BACKEND_URL]) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 2500);
+          const response = await fetch(`${candidate}${BACKEND_HEALTH_PATH}`, {
+            cache: 'no-store',
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          if (response.ok) {
+            activeBackendUrl = candidate;
+            return candidate;
+          }
+        } catch (error) {
+          // Try the next backend.
+        }
+      }
+      return activeBackendUrl;
+    })();
+  }
+  return backendResolution;
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'BACKEND_FETCH') {
-    let targetUrl;
-    try {
-      targetUrl = new URL(message.path || '/', BACKEND_URL);
-      if (targetUrl.origin !== new URL(BACKEND_URL).origin) {
-        throw new Error('Backend relay only allows the configured backend origin');
+    resolveBackendUrl().then((backendUrl) => {
+      let targetUrl;
+      try {
+        targetUrl = new URL(message.path || '/', backendUrl);
+        if (targetUrl.origin !== new URL(backendUrl).origin) {
+          throw new Error('Backend relay only allows the resolved backend origin');
+        }
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+        return;
       }
-    } catch (error) {
-      sendResponse({ success: false, error: error.message });
-      return false;
-    }
 
-    fetch(targetUrl.toString(), {
-      method: message.init?.method || 'GET',
-      headers: message.init?.headers || {},
-      body: message.init?.body ?? undefined,
-      cache: message.init?.cache || 'default'
-    }).then(async (response) => {
-      const body = await response.text();
-      sendResponse({
-        success: true,
-        status: response.status,
-        headers: Object.fromEntries(response.headers.entries()),
-        body
+      fetch(targetUrl.toString(), {
+        method: message.init?.method || 'GET',
+        headers: message.init?.headers || {},
+        body: message.init?.body ?? undefined,
+        cache: message.init?.cache || 'default'
+      }).then(async (response) => {
+        const body = await response.text();
+        sendResponse({
+          success: true,
+          status: response.status,
+          headers: Object.fromEntries(response.headers.entries()),
+          body
+        });
+      }).catch((error) => {
+        sendResponse({ success: false, error: error.message || 'Backend request failed' });
       });
-    }).catch((error) => {
-      sendResponse({ success: false, error: error.message || 'Backend request failed' });
     });
 
+    return true;
+  }
+
+  if (message.type === 'GET_BACKEND_URL') {
+    resolveBackendUrl().then((backendUrl) => sendResponse({ backendUrl }));
     return true;
   }
 
@@ -56,11 +92,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
 
     // Notify backend in background to warm cache
-    fetch(`${BACKEND_URL}/api/detect-and-scrape`, {
+    resolveBackendUrl().then((backendUrl) => fetch(`${backendUrl}/api/detect-and-scrape`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain, url, pageType })
-    }).then(res => res.json()).then(data => {
+    })).then(res => res.json()).then(data => {
       chrome.storage.local.set({ lastScrapedData: data });
     }).catch(err => {
       console.log('Backend sync offline / waiting for start:', err.message);
