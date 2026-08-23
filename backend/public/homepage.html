@@ -104,12 +104,20 @@
       </div>
     </section>
 
-    <section id="demo" class="section page-shell">
-      <div class="section-heading">
-        <div class="eyebrow"><span class="eyebrow-dot"></span> Live recovery demo</div>
-        <h2>Watch a collector repair itself.</h2>
-        <p>Open the demo store, visit a product page, and watch ScrapeVerse provision a store-specific collector, validate core fields, and surface retry or self-healing status when extraction needs recovery.</p>
-        <a class="button button-secondary" href="https://jolly-crepe-84310b.netlify.app/" target="_blank" rel="noopener">Open self-healing demo <span>↗</span></a>
+    <section id="demo" class="demo-section page-shell">
+      <div class="demo-card">
+        <div class="demo-copy">
+          <div class="eyebrow"><span class="eyebrow-dot"></span> Live recovery demo</div>
+          <h2>Watch a collector repair itself.</h2>
+          <p>Open the demo store and visit a product page. ScrapeVerse provisions a store-specific collector, validates the core fields, and surfaces recovery status when extraction needs help.</p>
+          <a class="button button-primary" href="https://jolly-crepe-84310b.netlify.app/" target="_blank" rel="noopener">Open self-healing demo <span>↗</span></a>
+        </div>
+        <div class="demo-status-card" aria-label="Self-healing workflow preview">
+          <div class="demo-status-head"><span class="demo-live-dot"></span><b>Collector health</b><span class="demo-ready">SELF-HEAL READY</span></div>
+          <div class="demo-flow-step"><span class="demo-step-number">1</span><span><b>Detect store</b><small>Platform and domain identified</small></span><strong>✓</strong></div>
+          <div class="demo-flow-step"><span class="demo-step-number">2</span><span><b>Validate fields</b><small>Title · price · currency · product ID</small></span><strong>✓</strong></div>
+          <div class="demo-flow-step active"><span class="demo-step-number">3</span><span><b>Repair when needed</b><small>Bright Data evidence + bounded retry</small></span><strong>↗</strong></div>
+        </div>
       </div>
     </section>
 
