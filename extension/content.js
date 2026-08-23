@@ -165,6 +165,20 @@ const BACKEND_URL = 'http://localhost:3001';
     return anonymousVisitorIdPromise;
   }
 
+  function attachVisitorIdToHistoryLinks(container) {
+    if (!container) return;
+    getAnonymousVisitorId().then((visitorId) => {
+      if (!visitorId) return;
+      container.querySelectorAll('a[href*="/history"]').forEach((link) => {
+        try {
+          const target = new URL(link.href);
+          target.searchParams.set('visitor_id', visitorId);
+          link.href = target.toString();
+        } catch (error) {}
+      });
+    });
+  }
+
   const recentProductContextKey = 'scrapeverse_recent_product_contexts';
 
   function normalizeProductContextTitle(value) {
@@ -443,7 +457,8 @@ const BACKEND_URL = 'http://localhost:3001';
             currency: 'INR',
             image_url: item.image_url,
             order_status_url: window.location.href,
-            user_email: savedEmail
+            user_email: savedEmail,
+            user_id: await getAnonymousVisitorId()
           })
         });
       } catch (e) {}
@@ -988,7 +1003,8 @@ const BACKEND_URL = 'http://localhost:3001';
           body: JSON.stringify({
             url: window.location.href,
             platform,
-            manual_recheck: true
+            manual_recheck: true,
+            visitor_id: await getAnonymousVisitorId()
           })
         });
         json = await response.json().catch(() => ({}));
@@ -1281,6 +1297,7 @@ const BACKEND_URL = 'http://localhost:3001';
       }
       renderPreviewTopBanner(bannerEl, preview);
       document.body.prepend(bannerEl);
+      attachVisitorIdToHistoryLinks(bannerEl);
       bindTooltipViewportAlignment(bannerEl);
       // A cached reputation is independent of the current product scrape.
       // Render it immediately on revisits without starting a new search or
@@ -1317,7 +1334,8 @@ const BACKEND_URL = 'http://localhost:3001';
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               url: window.location.href,
-              platform
+              platform,
+              visitor_id: await getAnonymousVisitorId()
             })
           });
           if (productCheckNoticeTimer) {
@@ -1432,6 +1450,7 @@ const BACKEND_URL = 'http://localhost:3001';
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          visitor_id: await getAnonymousVisitorId(),
           domain: hostDomain,
           platform,
           isProductPage: false,
@@ -1543,6 +1562,7 @@ const BACKEND_URL = 'http://localhost:3001';
         if (json.success && json.reputation) {
           // Mount the banner now that data is ready
           document.body.prepend(bannerEl);
+          attachVisitorIdToHistoryLinks(bannerEl);
           bindTooltipViewportAlignment(bannerEl);
           const prevPaddingTop = document.body.style.paddingTop || '0px';
           document.body.style.paddingTop = `calc(${prevPaddingTop} + 46px)`;
@@ -2060,7 +2080,8 @@ const BACKEND_URL = 'http://localhost:3001';
             body: JSON.stringify({
               product_id: prod?.id,
               url: window.location.href,
-              email: resolvedEmail
+              email: resolvedEmail,
+              user_id: await getAnonymousVisitorId()
             })
           });
         }
@@ -2087,7 +2108,8 @@ const BACKEND_URL = 'http://localhost:3001';
             product_id: prod?.id,
             url: window.location.href,
             email: email,
-            target_price: resolvedTargetPrice
+            target_price: resolvedTargetPrice,
+            user_id: await getAnonymousVisitorId()
           })
         });
 

@@ -1999,41 +1999,6 @@ function renderPriceHistoryPage(req, res) {
             z-index: 10;
             transform: translate(-50%, -120%);
           }
-          .alert-box {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow-card);
-          }
-          .alert-inputs {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-          }
-          .alert-input {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 8px 14px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            outline: none;
-          }
-          .alert-btn {
-            background: var(--primary);
-            color: #ffffff;
-            font-weight: 600;
-            padding: 9px 18px;
-            border: none;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            cursor: pointer;
-            transition: background 0.2s;
-          .alert-btn:hover { background: var(--primary-hover); }
         </style>
       </head>
       <body>
@@ -2041,7 +2006,6 @@ function renderPriceHistoryPage(req, res) {
           <div class="top-nav">
             <a href="${product.url}" class="brand-logo">✦ ScrapeVerse Price Intelligence</a>
             <div style="display:flex;gap:10px;align-items:center;">
-              <a href="/history" class="back-link" style="color:var(--accent);">🕒 My Shopping History ↗</a>
               <a href="${product.url}" class="back-link">← Return to Store Product Page</a>
             </div>
           </div>
@@ -2125,17 +2089,6 @@ function renderPriceHistoryPage(req, res) {
             </div>
           </div>
 
-          <div class="alert-box">
-            <div>
-              <strong style="font-size:15px;display:block;">🔔 Set Price Drop Notification</strong>
-              <span style="font-size:12px;color:var(--text-muted);">Get notified instantly when ${cleanTitle} drops below your target price.</span>
-            </div>
-            <div class="alert-inputs">
-              <input type="number" id="alert-price" placeholder="Target ₹ (e.g. ${Math.round(currentPrice * 0.9)})" class="alert-input" style="width:140px;">
-              <input type="email" id="alert-email" placeholder="Your email address" class="alert-input" style="width:200px;">
-              <button class="alert-btn" onclick="setWatchlistAlert(${product.id})">Set Alert</button>
-            </div>
-          </div>
         </div>
 
         <script>
@@ -2271,28 +2224,6 @@ function renderPriceHistoryPage(req, res) {
             }
           }
 
-          function setWatchlistAlert(prodId) {
-            const price = document.getElementById('alert-price').value;
-            const email = document.getElementById('alert-email').value;
-            if (!price || !email) {
-              alert('Please enter your target price and email address.');
-              return;
-            }
-
-            fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ product_id: prodId, target_price: Number(price), email })
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.success) {
-                alert('✅ Success! You will be notified when this item drops to ₹' + price);
-              }
-            })
-            .catch(() => alert('Failed to save alert.'));
-          }
-
           renderChart(rawHistory);
         </script>
       </body>
@@ -2310,7 +2241,7 @@ function renderPriceHistoryPage(req, res) {
 // ─────────────────────────────────────────────
 function renderShoppingHistoryPage(req, res) {
   try {
-    const { domain } = req.query;
+    const { domain, visitor_id } = req.query;
     if (domain) {
       return renderStoreHistoryPage(req, res);
     }
@@ -2524,7 +2455,8 @@ function renderShoppingHistoryPage(req, res) {
             if (!container) return;
 
             try {
-              const res = await fetch('/api/history');
+              const visitorId = new URLSearchParams(window.location.search).get('visitor_id') || '';
+              const res = await fetch('/api/history?visitor_id=' + encodeURIComponent(visitorId));
               const json = await res.json();
 
               if (!json.success || !json.history || json.history.length === 0) {
@@ -2568,7 +2500,7 @@ function renderShoppingHistoryPage(req, res) {
                           <span style="font-size:12px;background:var(--surface);color:var(--text-body);padding:5px 12px;border-radius:var(--radius-full);font-weight:600;border:1px solid var(--border);">
                             \${st.product_views_count} Product\${st.product_views_count === 1 ? '' : 's'} Tracked
                           </span>
-                          <a href="/history?domain=\${st.domain}" style="font-size:12px;color:var(--primary);text-decoration:none;font-weight:600;padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card-bg);">
+                          <a href="/history?domain=\${st.domain}&visitor_id=${encodeURIComponent(visitor_id || '')}" style="font-size:12px;color:var(--primary);text-decoration:none;font-weight:600;padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card-bg);">
                             View Tracked Items (\${st.product_views_count}) ↗
                           </a>
                         </div>
@@ -2615,7 +2547,7 @@ function renderShoppingHistoryPage(req, res) {
                         }).join('')}
 
                         \${hasMore ? \`
-                          <a href="/history?domain=\${st.domain}" style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 130px; min-width: 130px; background: var(--surface); border: 1px dashed var(--primary); border-radius: var(--radius-md); padding: 14px; text-decoration: none; color: var(--primary); font-weight: 700; text-align: center; box-sizing: border-box;">
+                          <a href="/history?domain=\${st.domain}&visitor_id=${encodeURIComponent(visitor_id || '')}" style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 130px; min-width: 130px; background: var(--surface); border: 1px dashed var(--primary); border-radius: var(--radius-md); padding: 14px; text-decoration: none; color: var(--primary); font-weight: 700; text-align: center; box-sizing: border-box;">
                             <span style="font-size: 18px;">+\${st.products.length - 7}</span>
                             <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">View All \${st.products.length} Items ↗</span>
                           </a>
@@ -2675,7 +2607,8 @@ function renderShoppingHistoryPage(req, res) {
             if (!container) return;
 
             try {
-              const res = await fetch('/api/purchases');
+              const visitorId = new URLSearchParams(window.location.search).get('visitor_id') || '';
+              const res = await fetch('/api/purchases?user_id=' + encodeURIComponent(visitorId));
               const json = await res.json();
 
               const badge = document.getElementById('purchases-count-badge');
@@ -2750,7 +2683,8 @@ function renderShoppingHistoryPage(req, res) {
             container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);">✦ Fetching active price alerts...</div>';
 
             try {
-              const res = await fetch('/api/watchlist/user');
+              const visitorId = new URLSearchParams(window.location.search).get('visitor_id') || '';
+              const res = await fetch('/api/watchlist/user?user_id=' + encodeURIComponent(visitorId));
               const json = await res.json();
 
               const badge = document.getElementById('alerts-count-badge');
@@ -2818,10 +2752,11 @@ function renderShoppingHistoryPage(req, res) {
             if (!confirm('Turn off price drop email alerts for this item?')) return;
 
             try {
+              const visitorId = new URLSearchParams(window.location.search).get('visitor_id') || '';
               const res = await fetch('/api/watchlist/unsubscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product_id: productId })
+                body: JSON.stringify({ product_id: productId, user_id: visitorId })
               });
               const data = await res.json();
               if (data.success) {
@@ -2850,11 +2785,12 @@ function renderShoppingHistoryPage(req, res) {
           }
 
           // Pre-fetch count badges
-          fetch('/api/purchases').then(r => r.json()).then(d => {
+          const historyVisitorId = new URLSearchParams(window.location.search).get('visitor_id') || '';
+          fetch('/api/purchases?user_id=' + encodeURIComponent(historyVisitorId)).then(r => r.json()).then(d => {
             const b = document.getElementById('purchases-count-badge');
             if (b && d.count !== undefined) b.innerText = d.count;
           }).catch(() => {});
-          fetch('/api/watchlist/user').then(r => r.json()).then(d => {
+          fetch('/api/watchlist/user?user_id=' + encodeURIComponent(historyVisitorId)).then(r => r.json()).then(d => {
             const b = document.getElementById('alerts-count-badge');
             if (b && d.count !== undefined) b.innerText = d.count;
           }).catch(() => {});
@@ -2880,7 +2816,7 @@ app.get(['/', '/history'], renderShoppingHistoryPage);
 // ─────────────────────────────────────────────
 function renderStoreHistoryPage(req, res) {
   try {
-    const { domain } = req.query;
+    const { domain, visitor_id } = req.query;
     if (!domain) {
       return res.redirect('/history');
     }
@@ -2888,7 +2824,7 @@ function renderStoreHistoryPage(req, res) {
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
     const brandName = cleanDomain.split('.')[0].toUpperCase();
 
-    const history = db.getUserBrowsingHistory();
+    const history = db.getUserBrowsingHistory(visitor_id);
     const storeRecord = history.find(h => h.domain.toLowerCase() === cleanDomain) || {
       domain: cleanDomain,
       brand: brandName,
@@ -3148,10 +3084,12 @@ function renderStoreHistoryPage(req, res) {
  */
 app.post('/api/history/track', (req, res) => {
   try {
-    const { domain, platform, isProductPage, url, title, price, image_url, product_id } = req.body;
+    const { visitor_id, domain, platform, isProductPage, url, title, price, image_url, product_id } = req.body;
     if (!url) return res.status(400).json({ error: 'Missing url' });
+    if (!visitor_id) return res.status(400).json({ error: 'Missing visitor_id' });
 
     const historyId = db.recordUserVisit({
+      visitor_id,
       domain,
       platform,
       isProductPage: Boolean(isProductPage),
@@ -3202,7 +3140,7 @@ app.post('/api/traffic/event', (req, res) => {
  */
 app.get('/api/history', (req, res) => {
   try {
-    const { product_id, url } = req.query;
+    const { product_id, url, visitor_id } = req.query;
     if (product_id || url) {
       let prod = null;
       if (product_id) {
@@ -3225,7 +3163,7 @@ app.get('/api/history', (req, res) => {
       });
     }
 
-    const history = db.getUserBrowsingHistory();
+    const history = db.getUserBrowsingHistory(visitor_id);
     res.json({ success: true, history });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -3401,7 +3339,7 @@ app.post('/api/scrape', async (req, res) => {
   let domain = '';
   let store = null;
   try {
-    const { url, platform = 'shopify', hints = {} } = req.body;
+    const { url, platform = 'shopify', hints = {}, visitor_id } = req.body;
     if (!url) {
       return res.status(400).json({ error: 'Missing required field: url' });
     }
@@ -3515,6 +3453,7 @@ app.post('/api/scrape', async (req, res) => {
     // Auto-record verified product into user_history table
     try {
       db.trackStoreVisit({
+        visitor_id,
         domain,
         platform,
         isProductPage: true,
@@ -3757,7 +3696,9 @@ app.post('/api/purchases/track', (req, res) => {
       currency,
       image_url,
       order_status_url,
-      user_email
+      user_email,
+      user_id,
+      visitor_id
     } = req.body;
 
     if (!domain) {
@@ -3777,7 +3718,8 @@ app.post('/api/purchases/track', (req, res) => {
       currency,
       image_url,
       order_status_url,
-      user_email
+      user_email,
+      user_id: user_id || visitor_id || null
     });
 
     res.json({
@@ -3797,8 +3739,8 @@ app.post('/api/purchases/track', (req, res) => {
  */
 app.get('/api/purchases', (req, res) => {
   try {
-    const { email } = req.query;
-    const purchases = db.getUserPurchases(email);
+    const { email, user_id, visitor_id } = req.query;
+    const purchases = db.getUserPurchases(email, user_id || visitor_id || null);
     res.json({
       success: true,
       count: purchases.length,
@@ -4171,7 +4113,8 @@ app.get('/api/health-status', (req, res) => {
  */
 function handleWatchlistSubscription(req, res) {
   try {
-    let { product_id, url, email, target_price } = req.body;
+    let { product_id, url, email, target_price, user_id, visitor_id } = req.body;
+    user_id = user_id || visitor_id || null;
     if (!email) {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
@@ -4187,7 +4130,7 @@ function handleWatchlistSubscription(req, res) {
       }
     }
 
-    const watchId = db.addToWatchlist(product_id || 1, email, target_price || null);
+    const watchId = db.addToWatchlist(product_id || 1, email, target_price || null, user_id);
     const userToken = db.getOrCreateUserToken(email);
 
     res.json({
@@ -4196,6 +4139,7 @@ function handleWatchlistSubscription(req, res) {
       token: userToken,
       manageUrl: `/history?tab=alerts&token=${userToken}`,
       product_id: product_id || 1,
+      user_id,
       message: `Subscribed to price-drop alerts for this product.`
     });
   } catch (error) {
@@ -4210,7 +4154,8 @@ app.post('/api/watchlist', handleWatchlistSubscription);
  */
 app.post('/api/watchlist/unsubscribe', (req, res) => {
   try {
-    let { product_id, url, email, token } = req.body;
+    let { product_id, url, email, token, user_id, visitor_id } = req.body;
+    user_id = user_id || visitor_id || null;
     const resolvedEmail = (token ? db.getEmailByToken(token) : email) || '';
     if (!resolvedEmail) {
       return res.status(400).json({ error: 'Missing email or valid token' });
@@ -4221,7 +4166,7 @@ app.post('/api/watchlist/unsubscribe', (req, res) => {
       if (prod) product_id = prod.id;
     }
 
-    db.removeFromWatchlist(product_id || 1, resolvedEmail);
+    db.removeFromWatchlist(product_id || 1, resolvedEmail, user_id);
     res.json({
       success: true,
       message: `Successfully unsubscribed from price alerts.`
@@ -4236,9 +4181,9 @@ app.post('/api/watchlist/unsubscribe', (req, res) => {
  */
 app.get('/api/watchlist/user', (req, res) => {
   try {
-    const { email, token } = req.query;
+    const { email, token, user_id, visitor_id } = req.query;
     const resolvedEmail = (token ? db.getEmailByToken(token) : email) || null;
-    const items = db.getUserWatchlist(resolvedEmail);
+    const items = db.getUserWatchlist(resolvedEmail, user_id || visitor_id || null);
     res.json({ success: true, count: items.length, items });
   } catch (error) {
     res.status(500).json({ error: error.message });

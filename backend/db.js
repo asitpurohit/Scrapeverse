@@ -3,7 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const dbPath = path.join(__dirname, 'scrape_verse.db');
+// Render uses SQLITE_DB_PATH on its persistent disk. Local development keeps
+// using backend/scrape_verse.db when the variable is not configured.
+const dbPath = process.env.SQLITE_DB_PATH || path.join(__dirname, 'scrape_verse.db');
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new DatabaseSync(dbPath);
 const PRODUCT_FIELDS = [
   'p.id', 'p.store_id', 'p.product_id', 'p.url', 'p.handle', 'p.title',
@@ -159,6 +162,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS watchlist (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
+    user_id TEXT,
     user_email TEXT NOT NULL,
     target_price REAL,
     watched_since DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -168,6 +172,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS user_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visitor_id TEXT,
     store_domain TEXT NOT NULL,
     store_platform TEXT DEFAULT 'shopify',
     is_product_page BOOLEAN DEFAULT 0,
@@ -203,6 +208,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS user_purchases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
     order_number TEXT,
     store_domain TEXT NOT NULL,
     store_platform TEXT DEFAULT 'shopify',
@@ -246,6 +252,17 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Existing local databases may predate per-extension history ownership.
+try {
+  db.exec('ALTER TABLE user_history ADD COLUMN visitor_id TEXT');
+} catch (e) {}
+try {
+  db.exec('ALTER TABLE watchlist ADD COLUMN user_id TEXT');
+} catch (e) {}
+try {
+  db.exec('ALTER TABLE user_purchases ADD COLUMN user_id TEXT');
+} catch (e) {}
 
 // Existing databases may still have the original domain-only stores table.
 // Add collector state first, then rebuild the table once to support the
@@ -1241,8 +1258,9 @@ module.exports = {
   },
 
   // Watchlist
-  addToWatchlist: (productId, email, targetPrice = null) => {
+  addToWatchlist: (productId, email, targetPrice = null, userId = null) => {
     const cleanEmail = email.toLowerCase().trim();
+    const cleanUserId = String(userId || '').trim() || null;
     const hash = crypto.createHmac('sha256', 'scrapeverse_secret_key_2026').update(cleanEmail).digest('hex').slice(0, 24);
     const token = `sv_tok_${hash}`;
     try {
@@ -1250,7 +1268,9 @@ module.exports = {
     } catch (e) {}
 
     // Check if already subscribed to prevent duplicates
-    const existing = db.prepare('SELECT id FROM watchlist WHERE product_id = ? AND LOWER(user_email) = ?').get(productId, cleanEmail);
+    const existing = cleanUserId
+      ? db.prepare('SELECT id FROM watchlist WHERE product_id = ? AND LOWER(user_email) = ? AND user_id = ?').get(productId, cleanEmail, cleanUserId)
+      : db.prepare('SELECT id FROM watchlist WHERE product_id = ? AND LOWER(user_email) = ? AND user_id IS NULL').get(productId, cleanEmail);
     if (existing) {
       if (targetPrice) {
         db.prepare('UPDATE watchlist SET target_price = ?, notified = 0 WHERE id = ?').run(targetPrice, existing.id);
@@ -1258,29 +1278,42 @@ module.exports = {
       return existing.id;
     }
     const stmt = db.prepare(`
-      INSERT INTO watchlist (product_id, user_email, target_price)
-      VALUES (?, ?, ?)
+      INSERT INTO watchlist (product_id, user_id, user_email, target_price)
+      VALUES (?, ?, ?, ?)
     `);
-    const info = stmt.run(productId, cleanEmail, targetPrice);
+    const info = stmt.run(productId, cleanUserId, cleanEmail, targetPrice);
     return info.lastInsertRowid;
   },
 
-  removeFromWatchlist: (productId, email) => {
-    return db.prepare('DELETE FROM watchlist WHERE product_id = ? AND user_email = ?').run(productId, email);
+  removeFromWatchlist: (productId, email, userId = null) => {
+    const cleanUserId = String(userId || '').trim();
+    if (cleanUserId) {
+      return db.prepare('DELETE FROM watchlist WHERE product_id = ? AND user_email = ? AND user_id = ?').run(productId, email, cleanUserId);
+    }
+    return db.prepare('DELETE FROM watchlist WHERE product_id = ? AND user_email = ? AND user_id IS NULL').run(productId, email);
   },
 
-  getUserWatchlist: (email = null) => {
+  getUserWatchlist: (email = null, userId = null) => {
     let query = `
-      SELECT w.id as watch_id, w.product_id, w.user_email, w.target_price, w.watched_since,
+      SELECT w.id as watch_id, w.product_id, w.user_id, w.user_email, w.target_price, w.watched_since,
              p.title, p.price as current_price, p.compare_at_price, p.image_url, p.url, s.domain as store_domain, s.platform as store_platform
       FROM watchlist w
       JOIN products p ON w.product_id = p.id
       LEFT JOIN stores s ON p.store_id = s.id
     `;
     const params = [];
-    if (email) {
-      query += ` WHERE LOWER(w.user_email) = LOWER(?)`;
+    if (userId) {
+      query += ` WHERE w.user_id = ?`;
+      params.push(String(userId).trim());
+      if (email) {
+        query += ` AND LOWER(w.user_email) = LOWER(?)`;
+        params.push(email.trim());
+      }
+    } else if (email) {
+      query += ` WHERE LOWER(w.user_email) = LOWER(?) AND w.user_id IS NULL`;
       params.push(email.trim());
+    } else {
+      return [];
     }
     query += ` ORDER BY w.watched_since DESC`;
 
@@ -1573,8 +1606,10 @@ module.exports = {
   },
 
   // Browsing History Tracking
-  recordUserVisit: ({ domain, platform = 'shopify', isProductPage = false, url, title, price, image_url, product_id }) => {
+  recordUserVisit: ({ visitor_id, domain, platform = 'shopify', isProductPage = false, url, title, price, image_url, product_id }) => {
     const cleanDomain = (domain || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
+    const cleanVisitorId = String(visitor_id || '').trim();
+    if (!cleanVisitorId) throw new Error('Missing visitor ID');
     
     let resolvedProductId = product_id || null;
     if (!resolvedProductId && url && isProductPage) {
@@ -1585,7 +1620,7 @@ module.exports = {
       }
     }
 
-    const existing = db.prepare('SELECT id, visited_price FROM user_history WHERE visited_url = ? ORDER BY visited_at DESC LIMIT 1').get(url);
+    const existing = db.prepare('SELECT id, visited_price FROM user_history WHERE visitor_id = ? AND visited_url = ? ORDER BY visited_at DESC LIMIT 1').get(cleanVisitorId, url);
 
     if (existing) {
       db.prepare('UPDATE user_history SET visited_at = CURRENT_TIMESTAMP WHERE id = ?').run(existing.id);
@@ -1593,11 +1628,12 @@ module.exports = {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO user_history (store_domain, store_platform, is_product_page, product_id, visited_url, visited_title, visited_price, visited_image)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO user_history (visitor_id, store_domain, store_platform, is_product_page, product_id, visited_url, visited_title, visited_price, visited_image)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
+      cleanVisitorId,
       cleanDomain,
       platform,
       isProductPage ? 1 : 0,
@@ -1611,7 +1647,9 @@ module.exports = {
     return info.lastInsertRowid;
   },
 
-  getUserBrowsingHistory: () => {
+  getUserBrowsingHistory: (visitorId) => {
+    const cleanVisitorId = String(visitorId || '').trim();
+    if (!cleanVisitorId) return [];
     const stores = db.prepare(`
       SELECT 
         store_domain, 
@@ -1620,9 +1658,10 @@ module.exports = {
         COUNT(*) as total_views,
         SUM(is_product_page) as product_views_count
       FROM user_history
+      WHERE visitor_id = ?
       GROUP BY store_domain
       ORDER BY last_visited_at DESC
-    `).all();
+    `).all(cleanVisitorId);
 
     return stores.map(st => {
       const products = db.prepare(`
@@ -1640,9 +1679,9 @@ module.exports = {
           p.image_url as current_image
         FROM user_history uh
         LEFT JOIN products p ON uh.product_id = p.id OR uh.visited_url = p.url
-        WHERE uh.store_domain = ? AND uh.is_product_page = 1
+        WHERE uh.visitor_id = ? AND uh.store_domain = ? AND uh.is_product_page = 1
         ORDER BY uh.visited_at DESC
-      `).all(st.store_domain);
+      `).all(cleanVisitorId, st.store_domain);
 
       const seenUrls = new Set();
       const uniqueProducts = [];
@@ -1714,7 +1753,8 @@ module.exports = {
       currency = 'INR',
       image_url,
       order_status_url,
-      user_email
+      user_email,
+      user_id
     } = data;
 
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
@@ -1772,13 +1812,14 @@ module.exports = {
 
     const stmt = db.prepare(`
       INSERT INTO user_purchases (
-        order_number, store_domain, store_platform, product_id, product_title, 
+        user_id, order_number, store_domain, store_platform, product_id, product_title,
         product_url, product_image, price_paid, quantity, total_order_amount, 
         currency, order_status_url, user_email
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
+      user_id || null,
       order_number || `ORD-${Date.now().toString().slice(-6)}`,
       cleanDomain,
       platform,
@@ -1797,7 +1838,9 @@ module.exports = {
     // Auto-resolve / mark active watchlist alerts for this product as bought
     if (resolvedProdId) {
       try {
-        if (user_email) {
+        if (user_email && user_id) {
+          db.prepare('DELETE FROM watchlist WHERE product_id = ? AND LOWER(user_email) = ? AND user_id = ?').run(resolvedProdId, user_email.toLowerCase().trim(), user_id);
+        } else if (user_email) {
           db.prepare('DELETE FROM watchlist WHERE product_id = ? AND LOWER(user_email) = ?').run(resolvedProdId, user_email.toLowerCase().trim());
         } else {
           db.prepare('UPDATE watchlist SET notified = 1 WHERE product_id = ?').run(resolvedProdId);
@@ -1808,16 +1851,25 @@ module.exports = {
     return { purchaseId: info.lastInsertRowid, orderNumber: order_number, productId: resolvedProdId };
   },
 
-  getUserPurchases: (userEmail = null) => {
+  getUserPurchases: (userEmail = null, userId = null) => {
     let query = `
       SELECT up.*, p.price as current_live_price, p.compare_at_price, p.image_url as current_image
       FROM user_purchases up
       LEFT JOIN products p ON up.product_id = p.id
     `;
     const params = [];
-    if (userEmail) {
-      query += ` WHERE LOWER(up.user_email) = LOWER(?)`;
+    if (userId) {
+      query += ` WHERE up.user_id = ?`;
+      params.push(String(userId).trim());
+      if (userEmail) {
+        query += ` AND LOWER(up.user_email) = LOWER(?)`;
+        params.push(userEmail.trim());
+      }
+    } else if (userEmail) {
+      query += ` WHERE LOWER(up.user_email) = LOWER(?) AND up.user_id IS NULL`;
       params.push(userEmail.trim());
+    } else {
+      return [];
     }
     query += ` ORDER BY up.purchased_at DESC`;
 
