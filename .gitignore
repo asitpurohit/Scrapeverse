@@ -18,6 +18,10 @@ coverage/
 dist/
 build/
 
+# Keep the public repository limited to the backend and extension
+demo-site/
+*.md
+
 # Local logs
 *.log
 npm-debug.log*
