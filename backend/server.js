@@ -3647,7 +3647,7 @@ app.post('/api/brand-reputation', async (req, res) => {
 
     if (!force_refresh) {
       const cached = db.getBrandReputation(domain);
-      if (cached) {
+      if (cached && cached.review_status !== 'unavailable' && cached.review_status !== 'fetch_error') {
         return res.json({ success: true, fromCache: true, reputation: cached });
       }
     }
@@ -3856,7 +3856,36 @@ app.post('/api/review-summary', async (req, res) => {
     // 2. Fetch any legacy raw reviews, if they exist.
     const reviews = product.id ? db.getProductReviews(product.id, 100) : [];
 
-    // 3. Synthesize only real review text. Never invent a review summary when
+    // 3. Recheck the provider when the previous attempt was unavailable.
+    if (product.id && !reviews?.length) {
+      const productUrl = new URL(product.url);
+      const domain = productUrl.hostname.replace(/^www\./, '');
+      const productHandle = product.handle || productUrl.pathname.split('/products/')[1]?.split('/')[0] || '';
+      const reviewData = await brightdata.scrapeJudgeMeReviews(
+        domain,
+        product.product_id,
+        productHandle,
+        40
+      );
+      if (reviewData.review_status !== 'unavailable' && reviewData.review_status !== 'fetch_error') {
+        const summaryData = await brightdata.synthesizeReviewSummary(
+          { ...product, review_count: reviewData.totalCount, reviews_count: reviewData.totalCount, avg_rating: reviewData.avgRating },
+          reviewData.reviews || []
+        );
+        const refreshedSummary = {
+          ...summaryData,
+          review_count_used: reviewData.totalCount,
+          source_review_count: reviewData.totalCount,
+          sample_count: (reviewData.reviews || []).length,
+          review_source: reviewData.review_source || 'judgeme',
+          review_status: reviewData.review_status
+        };
+        db.saveReviewSummary(product.id, refreshedSummary);
+        return res.json({ success: true, fromCache: false, productId: product.id, title: product.title, reviewSummary: refreshedSummary });
+      }
+    }
+
+    // 4. Synthesize only real review text. Never invent a review summary when
     // there is no review provider or no raw review data available.
     const summaryData = reviews.length > 0
       ? await brightdata.synthesizeReviewSummary(product, reviews)

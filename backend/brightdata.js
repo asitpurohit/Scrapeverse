@@ -1074,6 +1074,21 @@ async function scrapeJudgeMeReviews(domain, productId, productHandle, maxReviews
   const REVIEW_LIMIT = 40;
 
   async function fetchRaw(url) {
+    // Judge.me's widget endpoint and Shopify product HTML are publicly
+    // reachable. Prefer a direct request so review extraction does not depend
+    // on the Bright Data CLI cache; use Web Unlocker for stores that block it.
+    try {
+      const directResponse = await fetch(url, {
+        headers: { 'user-agent': 'ScrapeVerse Review Intelligence/1.0' }
+      });
+      if (directResponse.ok) {
+        const directBody = await directResponse.text();
+        if (directBody) return directBody;
+      }
+    } catch (error) {
+      console.warn('[Judge.me][Direct] Fetch failed, trying Bright Data:', error.message);
+    }
+
     try {
       const unlocked = await scrapeWithBrightDataUnlocker(url, { rawOnly: true });
       return unlocked?.raw || '';
