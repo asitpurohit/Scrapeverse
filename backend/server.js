@@ -3212,6 +3212,7 @@ async function enrichProductData({ domain, product, hints = {}, reviewCheckDue =
     // Raw review rows are temporary and are deleted after the summary saves.
     let reviewSummary = db.getCachedReviewSummary(product.id);
     const storedReviewCount = Number(reviewSummary?.source_review_count || reviewSummary?.review_count || 0);
+    const reviewRetryRequired = ['unavailable', 'fetch_error'].includes(String(reviewSummary?.review_status || '').toLowerCase());
     let reviewData = null;
 
     if (!reviewSummary) {
@@ -3222,7 +3223,7 @@ async function enrichProductData({ domain, product, hints = {}, reviewCheckDue =
         product.handle || (product.url?.split('/products/')?.[1]?.split('?')?.[0] || ''),
         40
       );
-    } else if (reviewCheckDue) {
+    } else if (reviewCheckDue || reviewRetryRequired) {
       setProductEnrichmentStatus(product.id, 'review_scraping', 'Checking for new Judge.me reviews...');
       const countProbe = await brightdata.scrapeJudgeMeReviews(
         domain.replace(/^www\./, ''),
