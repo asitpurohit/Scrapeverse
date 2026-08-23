@@ -889,6 +889,21 @@ Create one updated, balanced summary using only this evidence. Return ONLY valid
   };
 }
 
+function extractLLMText(value) {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return value.map(extractLLMText).filter(Boolean).join('\n');
+  }
+  if (value && typeof value === 'object') {
+    for (const key of ['text', 'content', 'output_text', 'value']) {
+      const extracted = extractLLMText(value[key]);
+      if (extracted) return extracted;
+    }
+    if (Array.isArray(value.parts)) return extractLLMText(value.parts);
+  }
+  return '';
+}
+
 /**
  * Universal LLM caller helper (supports OpenCode/OpenAI-compatible and Gemini endpoints)
  */
@@ -931,7 +946,10 @@ function callLLM(prompt) {
               console.warn('[LLM API Error]:', parsed.error);
               return resolve(null);
             }
-            let text = parsed.choices?.[0]?.message?.content?.trim();
+            // OpenCode can return content as a string, an array of parts, or
+            // an object containing text/content. Normalize all forms before
+            // the review/category JSON parsers consume the response.
+            let text = extractLLMText(parsed.choices?.[0]?.message?.content).trim();
             // Strip <think> blocks from reasoning models before returning the text
             if (text) {
               text = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
