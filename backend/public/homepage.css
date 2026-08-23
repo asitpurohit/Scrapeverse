@@ -89,7 +89,7 @@ h1 { max-width: 580px; margin: 23px 0 21px; font-size: clamp(43px, 5vw, 68px); l
 .demo-flow-step.active strong { color: #b4772c; }
 .real-stores-section { padding: 0 0 105px; }
 .real-stores-heading { margin-bottom: 28px; }
-.real-store-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.real-store-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .real-store-card { padding: 26px; min-height: 270px; display: flex; flex-direction: column; align-items: flex-start; border: 1px solid var(--line); border-radius: 17px; background: var(--paper); box-shadow: 0 8px 24px rgba(33,63,47,.05); }
 .real-store-card.japam-card { background: linear-gradient(135deg, #fffdf9, #f5eee7); }
 .real-store-card.phool-card { background: linear-gradient(135deg, #fffdf5, #fbf5dc); }
@@ -97,6 +97,8 @@ h1 { max-width: 580px; margin: 23px 0 21px; font-size: clamp(43px, 5vw, 68px); l
 .real-store-mark { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; color: white; font-size: 20px; }
 .japam-mark { background: #a84d43; font-family: Georgia, serif; }
 .phool-mark { color: #8b6a1d; background: #e6c65d; font-size: 13px; }
+.suta-card { background: linear-gradient(135deg, #fffafa, #f5e8e8); }
+.suta-mark { background: #252525; font-size: 14px; }
 .real-store-type { margin-top: 17px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .real-store-card h3 { margin: 10px 0 7px; font-size: 22px; }
 .real-store-card p { max-width: 440px; margin-bottom: 20px; color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
