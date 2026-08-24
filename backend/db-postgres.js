@@ -432,7 +432,9 @@ async function clearAllData() {
     'push_subscriptions', 'products', 'stores'
   ];
   await postgres.withTransaction(async (client) => {
-    for (const table of tables) await client.query(`DELETE FROM ${table}`);
+    // CASCADE handles every declared foreign-key relationship regardless of
+    // insertion order, while the transaction keeps the reset atomic.
+    await client.query(`TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
   });
   return Object.fromEntries(tables.map((table) => [table, 0]));
 }
