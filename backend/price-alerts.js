@@ -1,4 +1,4 @@
-const db = require('./db');
+const db = require('./db-loader');
 const email = require('./email');
 
 async function notifyPriceDrop({ productId, title, url, oldPrice, newPrice, currency = 'INR' }) {
@@ -8,7 +8,7 @@ async function notifyPriceDrop({ productId, title, url, oldPrice, newPrice, curr
     return { eligible: 0, sent: 0, failed: 0 };
   }
 
-  const watchers = db.getUnnotifiedWatchers(productId, current);
+  const watchers = await db.getUnnotifiedWatchers(productId, current);
   console.log(`[Price Alert] Evaluating price drop for "${title}": ₹${previous} → ₹${current}; ${watchers.length} eligible watcher(s)`);
   let sent = 0;
   let failed = 0;
@@ -24,7 +24,7 @@ async function notifyPriceDrop({ productId, title, url, oldPrice, newPrice, curr
         targetPrice: watcher.target_price,
         currency
       });
-      db.markWatchersNotified([watcher.id]);
+      await db.markWatchersNotified([watcher.id]);
       sent += 1;
       console.log(`[Price Alert] Email accepted for ${watcher.user_email}: ${title} ₹${previous} → ₹${current}`);
     } catch (error) {

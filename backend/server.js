@@ -3,7 +3,7 @@ const autoScraper = require('./cron');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const db = require('./db');
+const db = require('./db-loader');
 const brightdata = require('./brightdata');
 const { recheckProduct } = require('./product-recheck');
 
@@ -92,7 +92,7 @@ function setCollectorHealthStatus(domain, stage, message, visibleForMs = 15000) 
   });
 }
 
-function getCollectorHealthNotice(domain) {
+async function getCollectorHealthNotice(domain) {
   const cleanDomain = normalizeStoreDomain(domain);
   if (!cleanDomain) return { active: false, status: null };
 
@@ -104,7 +104,7 @@ function getCollectorHealthNotice(domain) {
   // The Bright Data heal can outlive the short-lived in-memory notice. Use
   // SQLite as the source of truth so the badge keeps showing the real status —
   // including failed heals — instead of falling back to a generic retry message.
-  const store = db.getStoreByDomain(cleanDomain);
+  const store = await db.getStoreByDomain(cleanDomain);
   if (store?.heal_status === 'running' || store?.heal_status === 'failed') {
     const isFailed = store.heal_status === 'failed';
     return {
@@ -190,9 +190,9 @@ function scheduleStoreCollectorProvisioning(storeId, domain, platform, sampleUrl
   if (storeCollectorProvisionJobs.has(storeId)) return;
 
   const run = async () => {
-    const claim = db.claimStoreCollectorProvisioning(storeId);
+    const claim = await db.claimStoreCollectorProvisioning(storeId);
     if (!claim.claimed) {
-      const current = claim.store || db.getStoreById(storeId);
+      const current = claim.store || await db.getStoreById(storeId);
       if (current?.collector_status === 'failed' && current.collector_next_retry_at) {
         const wait = Math.max(1000, new Date(current.collector_next_retry_at).getTime() - Date.now());
         const timer = setTimeout(() => {
@@ -212,14 +212,14 @@ function scheduleStoreCollectorProvisioning(storeId, domain, platform, sampleUrl
       // exposing the store as ready to browser clients.
       storeCollectorPhases.set(storeId, 'verification_scraping');
       await brightdata.scrapeProductPage(sampleUrl, created.collector_id);
-      db.markStoreCollectorReady(storeId, created.collector_id);
+      await db.markStoreCollectorReady(storeId, created.collector_id);
       storeCollectorPhases.delete(storeId);
       console.log(`[Store Collector] ✅ Ready for ${domain} (${platform}): ${created.collector_id}`);
     } catch (error) {
       storeCollectorPhases.delete(storeId);
-      const current = db.getStoreById(storeId);
+      const current = await db.getStoreById(storeId);
       const delay = collectorRetryDelay(current?.collector_attempts || 1);
-      db.markStoreCollectorFailure(storeId, error.message, delay);
+      await db.markStoreCollectorFailure(storeId, error.message, delay);
       console.warn(`[Store Collector] Creation failed for ${domain} (${platform}); retrying in ${Math.round(delay / 1000)}s: ${error.message}`);
       const timer = setTimeout(() => {
         storeCollectorProvisionJobs.delete(storeId);
@@ -264,7 +264,7 @@ function parseMissingCoreFields(run) {
   }
 }
 
-function recordCollectorScrapeObservation({ store, url, result = null, error = null }) {
+async function recordCollectorScrapeObservation({ store, url, result = null, error = null }) {
   if (!store?.collector_id || !store.domain) return;
 
   const missingFields = missingCoreFieldsFromScrape(result, error);
@@ -274,7 +274,7 @@ function recordCollectorScrapeObservation({ store, url, result = null, error = n
   const status = error
     ? (missingFields.length ? 'warning' : 'error')
     : 'healthy';
-  db.recordCollectorScrapeRun({
+  await db.recordCollectorScrapeRun({
     collector_id: store.collector_id,
     store_id: store.id,
     store_domain: store.domain,
@@ -287,7 +287,7 @@ function recordCollectorScrapeObservation({ store, url, result = null, error = n
 
   if (missingFields.length === 0 || store.collector_status !== 'ready') return;
 
-  const recentRuns = db.getRecentCollectorScrapeRuns(store.collector_id, COLLECTOR_HEALTH_SAMPLE_SIZE);
+  const recentRuns = await db.getRecentCollectorScrapeRuns(store.collector_id, COLLECTOR_HEALTH_SAMPLE_SIZE);
   if (recentRuns.length < COLLECTOR_HEALTH_SAMPLE_SIZE) return;
 
   const fieldsToHeal = CORE_PRODUCT_FIELDS.filter(field => {
@@ -302,14 +302,14 @@ function recordCollectorScrapeObservation({ store, url, result = null, error = n
     // healthy baseline product instead.
     const verificationUrl = url || recentRuns.find(run => run.product_url)?.product_url || '';
     const failureDetail = error?.message || result?.error || '';
-    scheduleAutomaticCollectorHeal(store, fieldsToHeal, verificationUrl, failureDetail);
+    await scheduleAutomaticCollectorHeal(store, fieldsToHeal, verificationUrl, failureDetail);
   }
 }
 
-function scheduleAutomaticCollectorHeal(store, missingFields, verificationUrl, failureDetail = '') {
+async function scheduleAutomaticCollectorHeal(store, missingFields, verificationUrl, failureDetail = '') {
   if (!store?.id || automaticCollectorHealInFlight.has(store.id)) return;
 
-  const claim = db.claimCollectorHeal(store.id);
+  const claim = await db.claimCollectorHeal(store.id);
   if (!claim.claimed || !claim.store?.collector_id) return;
 
   automaticCollectorHealInFlight.add(store.id);
@@ -322,7 +322,7 @@ function scheduleAutomaticCollectorHeal(store, missingFields, verificationUrl, f
     COLLECTOR_HEAL_STATUS_VISIBLE_MS
   );
   console.warn(`[Automatic Self-Heal] ${domain} collector ${collectorId} reported missing core fields: ${missingFields.join(', ')}`);
-  db.logHealthEvent(
+  await db.logHealthEvent(
     collectorId,
     domain,
     'warning',
@@ -365,7 +365,7 @@ function scheduleAutomaticCollectorHeal(store, missingFields, verificationUrl, f
         throw new Error(`Post-heal verification still misses: ${verificationMissing.join(', ')}`);
       }
 
-      db.recordCollectorScrapeRun({
+      await db.recordCollectorScrapeRun({
         collector_id: collectorId,
         store_id: store.id,
         store_domain: domain,
@@ -375,8 +375,8 @@ function scheduleAutomaticCollectorHeal(store, missingFields, verificationUrl, f
         missing_core_fields: [],
         fields_extracted: 9
       });
-      db.finishCollectorHeal(store.id, 'repaired', null, COLLECTOR_HEAL_COOLDOWN_MS);
-      db.logHealthEvent(
+      await db.finishCollectorHeal(store.id, 'repaired', null, COLLECTOR_HEAL_COOLDOWN_MS);
+      await db.logHealthEvent(
         collectorId,
         domain,
         'repaired',
@@ -386,8 +386,8 @@ function scheduleAutomaticCollectorHeal(store, missingFields, verificationUrl, f
       setCollectorHealthStatus(domain, 'collector_healed', 'Collector self-healing completed successfully.', COLLECTOR_HEALED_STATUS_VISIBLE_MS);
       console.log(`[Automatic Self-Heal] ✅ Collector ${collectorId} verified and approved`);
     } catch (error) {
-      db.finishCollectorHeal(store.id, 'failed', error.message, COLLECTOR_HEAL_FAILURE_COOLDOWN_MS);
-      db.logHealthEvent(collectorId, domain, 'warning', `Automatic self-heal failed: ${error.message}`, 0);
+      await db.finishCollectorHeal(store.id, 'failed', error.message, COLLECTOR_HEAL_FAILURE_COOLDOWN_MS);
+      await db.logHealthEvent(collectorId, domain, 'warning', `Automatic self-heal failed: ${error.message}`, 0);
       setCollectorHealthStatus(domain, 'collector_heal_failed', `Collector self-healing failed: ${summarizeCollectorError(error)}`, 15000);
       console.error(`[Automatic Self-Heal] ❌ Collector ${collectorId}: ${error.message}`);
     } finally {
@@ -414,14 +414,14 @@ app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 // ─────────────────────────────────────────────
 // 1. PUBLIC AGGREGATOR CATALOG API
 // ─────────────────────────────────────────────
-app.get('/api/catalog', (req, res) => {
+app.get('/api/catalog', async (req, res) => {
   try {
     const { q, domain, limit = 10 } = req.query;
     let products = [];
     if (q || domain) {
-      products = db.searchProducts(q, domain, limit);
+      products = await db.searchProducts(q, domain, limit);
     } else {
-      products = db.getCatalogProducts();
+      products = await db.getCatalogProducts();
     }
     const formatted = products.map(p => ({
       ...p,
@@ -444,7 +444,7 @@ app.get('/api/catalog', (req, res) => {
  * this disposable hackathon environment, so no environment variable is
  * needed. The dashboard also requires a browser confirmation prompt.
  */
-app.post('/api/admin/clear-database', (req, res) => {
+app.post('/api/admin/clear-database', async (req, res) => {
   if (databaseResetInProgress) {
     return res.status(409).json({ success: false, error: 'A database reset is already in progress.' });
   }
@@ -467,7 +467,7 @@ app.post('/api/admin/clear-database', (req, res) => {
     productEnrichmentInFlight.clear();
     automaticCollectorHealInFlight.clear();
 
-    const cleared = db.clearAllData();
+    const cleared = await db.clearAllData();
     console.warn('[Admin] Cleared all local database data after confirmation.');
     return res.json({ success: true, message: 'All local database data was deleted.', cleared });
   } catch (error) {
@@ -481,11 +481,20 @@ app.post('/api/admin/clear-database', (req, res) => {
 // ─────────────────────────────────────────────
 // 2. PRIVATE DEVELOPER / JUDGE DASHBOARD (/admin or /dashboard)
 // ─────────────────────────────────────────────
-function renderAdminDashboard(req, res) {
+async function getAdminTableRows(table) {
+  if (typeof db.getTableRows === 'function') return db.getTableRows(table, 1000);
   try {
-    const products = db.getAllProducts();
-    const stores = db.getAllStores();
-    const healthLogs = db.getLatestHealthLogs(5);
+    return db.db.prepare(`SELECT * FROM ${table} ORDER BY rowid DESC LIMIT 1000`).all();
+  } catch (error) {
+    return db.db.prepare(`SELECT * FROM ${table} LIMIT 1000`).all();
+  }
+}
+
+async function renderAdminDashboard(req, res) {
+  try {
+    const products = await db.getAllProducts();
+    const stores = await db.getAllStores();
+    const healthLogs = await db.getLatestHealthLogs(5);
 
     // Fetch all database tables for SQLite Tables Explorer
     const tableNames = [
@@ -507,15 +516,9 @@ function renderAdminDashboard(req, res) {
     const allTablesData = {};
     for (const tbl of tableNames) {
       try {
-        const rows = db.db.prepare(`SELECT * FROM ${tbl} ORDER BY rowid DESC LIMIT 1000`).all();
-        allTablesData[tbl] = rows;
+        allTablesData[tbl] = await getAdminTableRows(tbl);
       } catch (err) {
-        try {
-          const rows = db.db.prepare(`SELECT * FROM ${tbl} LIMIT 1000`).all();
-          allTablesData[tbl] = rows;
-        } catch (e) {
-          allTablesData[tbl] = [];
-        }
+        allTablesData[tbl] = [];
       }
     }
 
@@ -537,7 +540,7 @@ function renderAdminDashboard(req, res) {
     });
 
     // Populate products into store map
-    products.forEach(p => {
+    for (const p of products) {
       const pDomain = (p.store_domain || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase() || 'japam.in';
       if (!storeMap.has(pDomain)) {
         storeMap.set(pDomain, {
@@ -549,7 +552,7 @@ function renderAdminDashboard(req, res) {
         });
       }
 
-      const history = db.getPriceHistory(p.id);
+      const history = await db.getPriceHistory(p.id);
       const minPrice = history.length ? Math.min(...history.map(h => h.price)) : p.price;
       const maxPrice = history.length ? Math.max(...history.map(h => h.price)) : p.price;
       const currentPrice = history.length ? history[history.length - 1].price : p.price;
@@ -566,17 +569,18 @@ function renderAdminDashboard(req, res) {
         dropPercent,
         historyLength: history.length
       });
-    });
+    }
 
     const storeList = Array.from(storeMap.values());
     const storesWithProducts = storeList.filter(s => s.products.length > 0);
     const storesOverviewOnly = storeList.filter(s => s.products.length === 0);
 
-    const discountedProductsCount = products.filter(p => {
-      const history = db.getPriceHistory(p.id);
+    let discountedProductsCount = 0;
+    for (const p of products) {
+      const history = await db.getPriceHistory(p.id);
       const currentPrice = history.length ? history[history.length - 1].price : p.price;
-      return p.compare_at_price && p.compare_at_price > currentPrice;
-    }).length;
+      if (p.compare_at_price && p.compare_at_price > currentPrice) discountedProductsCount += 1;
+    }
 
     const healthRows = healthLogs.map(l => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #E5E2DC;">
@@ -1253,9 +1257,9 @@ function renderAdminDashboard(req, res) {
 // ─────────────────────────────────────────────
 // 2B. ADMIN BRAND CATALOG EXPLORER (/brand-catalog?domain=...)
 // ─────────────────────────────────────────────
-function renderBrandCatalogPage(req, res) {
+async function renderBrandCatalogPage(req, res) {
   try {
-    const allStores = db.getAllStores();
+    const allStores = await db.getAllStores();
     let { domain } = req.query;
     if (!domain) {
       domain = allStores.length > 0 ? allStores[0].domain : 'japam.in';
@@ -1264,15 +1268,15 @@ function renderBrandCatalogPage(req, res) {
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
     const brandName = cleanDomain.split('.')[0].toUpperCase();
 
-    const rawProducts = db.getProductsByDomain(cleanDomain);
-    const store = db.getStoreByDomain(cleanDomain) || {
+    const rawProducts = await db.getProductsByDomain(cleanDomain);
+    const store = await db.getStoreByDomain(cleanDomain) || {
       domain: cleanDomain,
       platform: 'shopify',
       last_scraped_at: new Date().toISOString()
     };
 
-    const products = rawProducts.map(p => {
-      const history = db.getPriceHistory(p.id);
+    const products = await Promise.all(rawProducts.map(async p => {
+      const history = await db.getPriceHistory(p.id);
       const minPrice = history.length ? Math.min(...history.map(h => h.price)) : p.price;
       const maxPrice = history.length ? Math.max(...history.map(h => h.price)) : p.price;
       const currentPrice = history.length ? history[history.length - 1].price : p.price;
@@ -1289,7 +1293,7 @@ function renderBrandCatalogPage(req, res) {
         dropPercent,
         historyLength: history.length
       };
-    });
+    }));
 
     const discountedCount = products.filter(p => p.dropPercent > 0).length;
     const allPrices = products.map(p => p.currentPrice);
@@ -1552,7 +1556,7 @@ function renderBrandCatalogPage(req, res) {
 // ─────────────────────────────────────────────
 // 2C. ADMIN COLLECTOR FAILURE MONITOR (/collector-failures)
 // ─────────────────────────────────────────────
-function renderCollectorFailuresPage(req, res) {
+async function renderCollectorFailuresPage(req, res) {
   try {
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
       '&': '&amp;',
@@ -1562,7 +1566,7 @@ function renderCollectorFailuresPage(req, res) {
       "'": '&#39;'
     }[character]));
     const formatDate = formatAdminDateTime;
-    const failedStores = db.getFailedCollectorStores();
+    const failedStores = await db.getFailedCollectorStores();
     const brandCount = new Set(failedStores.map(store => store.domain)).size;
 
     const failureCards = failedStores.map(store => {
@@ -1676,19 +1680,19 @@ app.get('/admin/collector-failures', renderCollectorFailuresPage);
 // ─────────────────────────────────────────────
 // 2B. USER-CENTRIC DEDICATED PRICE HISTORY PAGE (/price-history)
 // ─────────────────────────────────────────────
-function renderPriceHistoryPage(req, res) {
+async function renderPriceHistoryPage(req, res) {
   try {
     const { url, id } = req.query;
     let product = null;
 
     if (id) {
-      product = db.getProductById(id);
+      product = await db.getProductById(id);
     } else if (url) {
-      product = db.getProductByUrl(url);
+      product = await db.getProductByUrl(url);
     }
 
-    const allProducts = db.getAllProducts();
-    const allStores = db.getAllStores();
+    const allProducts = await db.getAllProducts();
+    const allStores = await db.getAllStores();
     if (!product) {
       product = allProducts.find(p => p.url && p.url.includes('silver')) || allProducts[0];
     }
@@ -1698,9 +1702,9 @@ function renderPriceHistoryPage(req, res) {
     }
 
     const cleanTitle = brightdata.cleanDecodedText(product.title);
-    const priceHistoryView = buildPriceHistoryView(product, db.getPriceHistory(product.id));
+    const priceHistoryView = buildPriceHistoryView(product, await db.getPriceHistory(product.id));
     const { history, historyEstimated, lowestPrice: minPrice, highestPrice: maxPrice, currentPrice } = priceHistoryView;
-    const purchaseMetrics = db.getProductPurchaseMetrics(product.id);
+    const purchaseMetrics = await db.getProductPurchaseMetrics(product.id);
     const storedComparePrice = Number(product.compare_at_price);
     const comparePrice = storedComparePrice > 0 && storedComparePrice <= 100_000_000
       ? storedComparePrice
@@ -2817,7 +2821,7 @@ app.get(['/homepage', '/history'], renderShoppingHistoryPage);
 // ─────────────────────────────────────────────
 // 2C. DEDICATED BRAND STORE CATALOG & VISITED PRODUCTS (/store-history?domain=...)
 // ─────────────────────────────────────────────
-function renderStoreHistoryPage(req, res) {
+async function renderStoreHistoryPage(req, res) {
   try {
     const { domain, visitor_id } = req.query;
     if (!domain) {
@@ -2827,7 +2831,7 @@ function renderStoreHistoryPage(req, res) {
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
     const brandName = cleanDomain.split('.')[0].toUpperCase();
 
-    const history = db.getUserBrowsingHistory(visitor_id);
+    const history = await db.getUserBrowsingHistory(visitor_id);
     const storeRecord = history.find(h => h.domain.toLowerCase() === cleanDomain) || {
       domain: cleanDomain,
       brand: brandName,
@@ -3085,13 +3089,13 @@ function renderStoreHistoryPage(req, res) {
  * POST /api/history/track
  * Records user store & product visits from Chrome extension
  */
-app.post('/api/history/track', (req, res) => {
+app.post('/api/history/track', async (req, res) => {
   try {
     const { visitor_id, domain, platform, isProductPage, url, title, price, image_url, product_id } = req.body;
     if (!url) return res.status(400).json({ error: 'Missing url' });
     if (!visitor_id) return res.status(400).json({ error: 'Missing visitor_id' });
 
-    const historyId = db.recordUserVisit({
+    const historyId = await db.recordUserVisit({
       visitor_id,
       domain,
       platform,
@@ -3114,7 +3118,7 @@ app.post('/api/history/track', (req, res) => {
  * Records an anonymous extension-observed store visit.
  * This is intentionally separate from personal browsing history.
  */
-app.post('/api/traffic/event', (req, res) => {
+app.post('/api/traffic/event', async (req, res) => {
   try {
     const { visitor_id, domain, platform, page_type } = req.body || {};
     if (!visitor_id || !domain) {
@@ -3124,7 +3128,7 @@ app.post('/api/traffic/event', (req, res) => {
       return res.status(400).json({ error: 'Traffic event value is too long' });
     }
 
-    const result = db.recordTrafficEvent({
+    const result = await db.recordTrafficEvent({
       visitor_id,
       domain,
       platform,
@@ -3141,22 +3145,22 @@ app.post('/api/traffic/event', (req, res) => {
  * GET /api/history
  * Returns user's browsing history grouped by store, or single product price history if product_id/url provided
  */
-app.get('/api/history', (req, res) => {
+app.get('/api/history', async (req, res) => {
   try {
     const { product_id, url, visitor_id } = req.query;
     if (product_id || url) {
       let prod = null;
       if (product_id) {
-        prod = db.getProductById(product_id);
+        prod = await db.getProductById(product_id);
       } else if (url) {
-        prod = db.getProductByUrl(url);
+        prod = await db.getProductByUrl(url);
       }
 
       if (!prod) {
         return res.json({ success: true, history: [] });
       }
 
-      const priceHistoryView = buildPriceHistoryView(prod, db.getPriceHistory(prod.id));
+      const priceHistoryView = buildPriceHistoryView(prod, await db.getPriceHistory(prod.id));
       return res.json({
         success: true,
         productId: prod.id,
@@ -3166,7 +3170,7 @@ app.get('/api/history', (req, res) => {
       });
     }
 
-    const history = db.getUserBrowsingHistory(visitor_id);
+    const history = await db.getUserBrowsingHistory(visitor_id);
     res.json({ success: true, history });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -3197,20 +3201,20 @@ async function enrichProductData({ domain, product, hints = {}, reviewCheckDue =
   productEnrichmentInFlight.add(product.id);
   try {
     // 1. 30-Day Brand Web Reputation (cached by domain)
-    let brandReputation = db.getBrandReputation(domain);
+    let brandReputation = await db.getBrandReputation(domain);
     if (brandReputation) {
       setProductEnrichmentStatus(product.id, 'brand_reputation_cached', 'Brand reputation loaded from the 30-day cache.');
     } else {
       setProductEnrichmentStatus(product.id, 'brand_reputation', 'Searching external brand reputation sources...');
       const repData = await brightdata.researchBrandReputation(domain, product.brand);
-      brandReputation = db.saveBrandReputation(repData);
+      brandReputation = await db.saveBrandReputation(repData);
       setProductEnrichmentStatus(product.id, 'brand_reputation_saved', 'Brand reputation data received and saved.');
     }
 
     // 2. Check Judge.me on the 30-day cadence and collect at most the latest
     // 40 reviews only when the count has changed.
     // Raw review rows are temporary and are deleted after the summary saves.
-    let reviewSummary = db.getCachedReviewSummary(product.id);
+    let reviewSummary = await db.getCachedReviewSummary(product.id);
     const storedReviewCount = Number(reviewSummary?.source_review_count || reviewSummary?.review_count || 0);
     const reviewRetryRequired = ['unavailable', 'fetch_error'].includes(String(reviewSummary?.review_status || '').toLowerCase());
     let reviewData = null;
@@ -3251,13 +3255,13 @@ async function enrichProductData({ domain, product, hints = {}, reviewCheckDue =
         } else if (db.touchReviewChecked) {
           // The count was checked and did not change. Move the next review
           // check out by 30 days without touching the AI summary.
-          db.touchReviewChecked(product.id);
+          await db.touchReviewChecked(product.id);
         }
       }
     }
 
     if (reviewData?.review_status === 'unavailable') {
-      db.saveReviewSummary(product.id, {
+      await db.saveReviewSummary(product.id, {
         summary: 'Reviews unavailable for this store.',
         sentiment: 'Reviews Unavailable',
         positive_highlights: [],
@@ -3272,7 +3276,7 @@ async function enrichProductData({ domain, product, hints = {}, reviewCheckDue =
         review_status: 'unavailable',
         sampled_at: new Date().toISOString()
       });
-      db.deleteProductReviews(product.id);
+      await db.deleteProductReviews(product.id);
       setProductEnrichmentStatus(product.id, 'review_saved', 'Review data checked and saved.');
       console.log(`[Review] Judge.me not detected for ${domain}; saved unavailable status`);
     } else if (reviewData?.review_status !== 'fetch_error' && reviewData) {
@@ -3290,7 +3294,7 @@ async function enrichProductData({ domain, product, hints = {}, reviewCheckDue =
         { previousSummary: reviewSummary }
       );
 
-      db.saveReviewSummary(product.id, {
+      await db.saveReviewSummary(product.id, {
         summary: syn.summary,
         sentiment: syn.sentiment,
         highlights: syn.positive_highlights,
@@ -3307,12 +3311,12 @@ async function enrichProductData({ domain, product, hints = {}, reviewCheckDue =
         review_source: reviewData.review_source || 'judgeme',
         review_status: reviewData.review_status || 'available'
       });
-      db.deleteProductReviews(product.id);
+      await db.deleteProductReviews(product.id);
       setProductEnrichmentStatus(product.id, 'review_saved', 'Review data received and saved.');
       console.log(`[Review] Saved ${sampledReviews.length}/${finalReviewCount} latest reviews to summary; raw rows cleared for product ${product.id}`);
     } else if (reviewSummary) {
       // Clean up any legacy raw rows now that the summary is persistent.
-      db.deleteProductReviews(product.id);
+      await db.deleteProductReviews(product.id);
       setProductEnrichmentStatus(product.id, 'complete', 'Cached review summary is ready.');
     }
   } catch (error) {
@@ -3349,12 +3353,12 @@ app.post('/api/scrape', async (req, res) => {
     }
 
     domain = normalizeStoreDomain(url);
-    const storeId = db.upsertStore(domain, platform);
-    store = db.getStoreById(storeId);
+    const storeId = await db.upsertStore(domain, platform);
+    store = await db.getStoreById(storeId);
 
     if (!store?.collector_id || store.collector_status !== 'ready') {
       scheduleStoreCollectorProvisioning(storeId, domain, platform, url);
-      store = db.getStoreById(storeId);
+      store = await db.getStoreById(storeId);
       const collectorFailed = store?.collector_status === 'failed';
       const retryAfterMs = collectorFailed && store?.collector_next_retry_at
         ? Math.max(1000, new Date(store.collector_next_retry_at).getTime() - Date.now())
@@ -3375,7 +3379,7 @@ app.post('/api/scrape', async (req, res) => {
       });
     }
 
-    let product = db.getProductByUrl(url);
+    let product = await db.getProductByUrl(url);
     // Do not serve a previously cached review-widget/CSS string as a product
     // title. The next collector response will replace the bad cached record.
     if (product && !brightdata.isUsableProductTitle(product.title)) {
@@ -3395,15 +3399,15 @@ app.post('/api/scrape', async (req, res) => {
       storeCollectorPhases.set(storeId, 'product_scraping');
       try {
         extracted = await brightdata.scrapeProductPage(url, store.collector_id);
-        recordCollectorScrapeObservation({ store, url, result: extracted });
+        await recordCollectorScrapeObservation({ store, url, result: extracted });
       } catch (scrapeError) {
         storeCollectorPhases.delete(storeId);
-        recordCollectorScrapeObservation({ store, url, error: scrapeError });
+        await recordCollectorScrapeObservation({ store, url, error: scrapeError });
         throw scrapeError;
       }
       const cleanTitle = brightdata.cleanDecodedText(extracted.title || hints.title);
 
-      const newId = db.saveProduct({
+      const newId = await db.saveProduct({
         store_id: storeId,
         product_id: extracted.product_id,
         url: extracted.url,
@@ -3422,7 +3426,7 @@ app.post('/api/scrape', async (req, res) => {
         source: extracted.source || 'Bright Data Scraper Studio',
         latest_data: extracted.raw
       });
-      product = db.getProductById(newId);
+      product = await db.getProductById(newId);
       storeCollectorPhases.set(storeId, 'product_saved');
       setTimeout(() => {
         if (storeCollectorPhases.get(storeId) === 'product_saved') {
@@ -3456,7 +3460,7 @@ app.post('/api/scrape', async (req, res) => {
 
     // Auto-record verified product into user_history table
     try {
-      db.trackStoreVisit({
+      await db.trackStoreVisit({
         visitor_id,
         domain,
         platform,
@@ -3469,12 +3473,12 @@ app.post('/api/scrape', async (req, res) => {
       });
     } catch (e) {}
 
-    const priceHistoryView = buildPriceHistoryView(product, db.getPriceHistory(product.id));
-    const purchaseMetrics = db.getProductPurchaseMetrics(product.id);
+    const priceHistoryView = buildPriceHistoryView(product, await db.getPriceHistory(product.id));
+    const purchaseMetrics = await db.getProductPurchaseMetrics(product.id);
 
     // Enrichment uses Bright Data and the LLM, so it runs after the basic
     // product response. This keeps the top bar responsive on first visit.
-    const cachedBrandReputation = db.getBrandReputation(domain);
+    const cachedBrandReputation = await db.getBrandReputation(domain);
     setProductEnrichmentStatus(
       product.id,
       cachedBrandReputation ? 'brand_reputation_cached' : 'product_saved',
@@ -3482,7 +3486,7 @@ app.post('/api/scrape', async (req, res) => {
         ? 'Brand reputation loaded from the 30-day cache.'
         : 'Product data received and saved.'
     );
-    const cachedReviewSummary = db.getCachedReviewSummary(product.id);
+    const cachedReviewSummary = await db.getCachedReviewSummary(product.id);
     // Product name/price refresh every 24 hours; Judge.me review count is
     // checked independently every 30 days, alongside brand reputation.
     reviewCheckDue = isForceRefresh
@@ -3511,7 +3515,7 @@ app.post('/api/scrape', async (req, res) => {
     });
   } catch (error) {
     console.error('Scrape endpoint error:', error);
-    const collectorHealthNotice = getCollectorHealthNotice(domain);
+    const collectorHealthNotice = await getCollectorHealthNotice(domain);
     if (collectorHealthNotice.active && collectorHealthNotice.status?.stage === 'collector_self_healing') {
       return res.status(202).json({
         success: false,
@@ -3552,7 +3556,7 @@ app.post('/api/scrape', async (req, res) => {
  * endpoint lets the extension show the current background stage without
  * triggering another scrape or review request.
  */
-app.get('/api/enrichment-status', (req, res) => {
+app.get('/api/enrichment-status', async (req, res) => {
   try {
     const productId = req.query.product_id;
     if (!productId) {
@@ -3561,8 +3565,8 @@ app.get('/api/enrichment-status', (req, res) => {
 
     const status = productEnrichmentStatus.get(String(productId));
     const pending = productEnrichmentInFlight.has(Number(productId)) || productEnrichmentInFlight.has(String(productId));
-    const product = db.getProductById(productId);
-    const cachedReviewSummary = product ? db.getCachedReviewSummary(product.id) : null;
+    const product = await db.getProductById(productId);
+    const cachedReviewSummary = product ? await db.getCachedReviewSummary(product.id) : null;
 
     res.json({
       success: true,
@@ -3583,11 +3587,11 @@ app.get('/api/enrichment-status', (req, res) => {
  * GET /api/collector-health-status
  * Lets the product banner show automatic collector self-healing in progress.
  */
-app.get('/api/collector-health-status', (req, res) => {
+app.get('/api/collector-health-status', async (req, res) => {
   try {
     const domain = normalizeStoreDomain(req.query.domain);
-    const notice = getCollectorHealthNotice(domain);
-    const store = db.getStoreByDomain(domain);
+    const notice = await getCollectorHealthNotice(domain);
+    const store = await db.getStoreByDomain(domain);
     res.json({
       success: true,
       domain,
@@ -3609,11 +3613,11 @@ app.get('/api/collector-health-status', (req, res) => {
  * waiting/retrying, so the product badge needs an independent readiness
  * signal and must not require a page refresh.
  */
-app.get('/api/store-collector-status', (req, res) => {
+app.get('/api/store-collector-status', async (req, res) => {
   try {
     const domain = normalizeStoreDomain(req.query.domain);
     const platform = String(req.query.platform || 'shopify').toLowerCase();
-    const store = domain ? db.getStoreByKey(domain, platform) : null;
+    const store = domain ? await db.getStoreByKey(domain, platform) : null;
     const retryAfterMs = store?.collector_next_retry_at
       ? Math.max(1000, new Date(store.collector_next_retry_at).getTime() - Date.now())
       : 0;
@@ -3646,14 +3650,14 @@ app.post('/api/brand-reputation', async (req, res) => {
     }
 
     if (!force_refresh) {
-      const cached = db.getBrandReputation(domain);
+      const cached = await db.getBrandReputation(domain);
       if (cached && cached.review_status !== 'unavailable' && cached.review_status !== 'fetch_error') {
         return res.json({ success: true, fromCache: true, reputation: cached });
       }
     }
 
     const researched = await brightdata.researchBrandReputation(domain, brand_name);
-    const saved = db.saveBrandReputation(researched);
+    const saved = await db.saveBrandReputation(researched);
     res.json({ success: true, fromCache: false, reputation: saved });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -3666,11 +3670,11 @@ app.post('/api/brand-reputation', async (req, res) => {
  * read-only and never starts a web search, so revisits can render cached
  * brand intelligence while the product collector runs independently.
  */
-app.get('/api/brand-reputation-cache', (req, res) => {
+app.get('/api/brand-reputation-cache', async (req, res) => {
   try {
     const domain = normalizeStoreDomain(req.query.domain);
     if (!domain) return res.status(400).json({ success: false, error: 'Missing domain parameter' });
-    const reputation = db.getBrandReputation(domain);
+    const reputation = await db.getBrandReputation(domain);
     return res.json({
       success: true,
       fromCache: Boolean(reputation),
@@ -3685,7 +3689,7 @@ app.get('/api/brand-reputation-cache', (req, res) => {
  * POST /api/purchases/track
  * Records completed order from Shopify/DTC thank you page
  */
-app.post('/api/purchases/track', (req, res) => {
+app.post('/api/purchases/track', async (req, res) => {
   try {
     const {
       order_number,
@@ -3709,7 +3713,7 @@ app.post('/api/purchases/track', (req, res) => {
       return res.status(400).json({ error: 'Missing domain' });
     }
 
-    const result = db.recordUserPurchase({
+    const result = await db.recordUserPurchase({
       order_number,
       domain,
       platform,
@@ -3741,10 +3745,10 @@ app.post('/api/purchases/track', (req, res) => {
  * GET /api/purchases
  * Returns all recorded user purchases with price drop savings and refund alerts
  */
-app.get('/api/purchases', (req, res) => {
+app.get('/api/purchases', async (req, res) => {
   try {
     const { email, user_id, visitor_id } = req.query;
-    const purchases = db.getUserPurchases(email, user_id || visitor_id || null);
+    const purchases = await db.getUserPurchases(email, user_id || visitor_id || null);
     res.json({
       success: true,
       count: purchases.length,
@@ -3758,15 +3762,15 @@ app.get('/api/purchases', (req, res) => {
 /**
  * GET /api/product
  */
-app.get('/api/product', (req, res) => {
+app.get('/api/product', async (req, res) => {
   try {
     const { url, id } = req.query;
     let product = null;
 
     if (id) {
-      product = db.getProductById(id);
+      product = await db.getProductById(id);
     } else if (url) {
-      product = db.getProductByUrl(url);
+      product = await db.getProductByUrl(url);
     } else {
       return res.status(400).json({ error: 'Provide either ?url=... or ?id=...' });
     }
@@ -3775,7 +3779,7 @@ app.get('/api/product', (req, res) => {
       return res.status(404).json({ error: 'Product not found in database. Call POST /api/scrape first.' });
     }
 
-    const priceHistoryView = buildPriceHistoryView(product, db.getPriceHistory(product.id));
+    const priceHistoryView = buildPriceHistoryView(product, await db.getPriceHistory(product.id));
     res.json({
       success: true,
       product: {
@@ -3799,9 +3803,9 @@ app.post('/api/review-summary', async (req, res) => {
     let product = null;
 
     if (product_id) {
-      product = db.getProductById(product_id);
+      product = await db.getProductById(product_id);
     } else if (url) {
-      product = db.getProductByUrl(url);
+      product = await db.getProductByUrl(url);
     }
 
     if (!product) {
@@ -3820,7 +3824,7 @@ app.post('/api/review-summary', async (req, res) => {
         return res.json({ success: true, pending: true, productId: product.id });
       }
 
-      const cached = db.getCachedReviewSummary(product.id);
+      const cached = await db.getCachedReviewSummary(product.id);
       if (cached) {
         if (cached.review_status !== 'unavailable' && !cached.delivery_insights) {
           cached.delivery_insights = {
@@ -3854,7 +3858,7 @@ app.post('/api/review-summary', async (req, res) => {
     }
 
     // 2. Fetch any legacy raw reviews, if they exist.
-    const reviews = product.id ? db.getProductReviews(product.id, 100) : [];
+    const reviews = product.id ? await db.getProductReviews(product.id, 100) : [];
 
     // 3. Recheck the provider when the previous attempt was unavailable.
     if (product.id && !reviews?.length) {
@@ -3880,7 +3884,7 @@ app.post('/api/review-summary', async (req, res) => {
           review_source: reviewData.review_source || 'judgeme',
           review_status: reviewData.review_status
         };
-        db.saveReviewSummary(product.id, refreshedSummary);
+        await db.saveReviewSummary(product.id, refreshedSummary);
         return res.json({ success: true, fromCache: false, productId: product.id, title: product.title, reviewSummary: refreshedSummary });
       }
     }
@@ -3904,7 +3908,7 @@ app.post('/api/review-summary', async (req, res) => {
 
     // 4. Save to Cache
     if (product.id && (reviews.length > 0 || summaryData.review_status === 'unavailable')) {
-      db.saveReviewSummary(product.id, summaryData);
+      await db.saveReviewSummary(product.id, summaryData);
     }
 
     res.json({
@@ -3923,7 +3927,7 @@ app.post('/api/review-summary', async (req, res) => {
 /**
  * POST /api/similar
  */
-app.post('/api/similar', (req, res) => {
+app.post('/api/similar', async (req, res) => {
   try {
     const {
       product_id,
@@ -3940,13 +3944,13 @@ app.post('/api/similar', (req, res) => {
 
     let targetProduct = null;
     if (product_id) {
-      targetProduct = db.getProductById(product_id);
+      targetProduct = await db.getProductById(product_id);
     } else if (url) {
-      targetProduct = db.getProductByUrl(url);
+      targetProduct = await db.getProductByUrl(url);
     }
 
     if (!targetProduct) {
-      let allProds = db.getAllProducts().map(p => ({
+      let allProds = (await db.getAllProducts()).map(p => ({
         ...p,
         title: brightdata.cleanDecodedText(p.title),
         similarity_score: 0.88
@@ -3972,7 +3976,7 @@ app.post('/api/similar', (req, res) => {
     }
 
     // Layer 1: Hard Category & Scope Filter (Default query ordered by id DESC = newest first)
-    let candidates = db.getSimilarCandidates(targetProduct.category, targetProduct.id, {
+    let candidates = await db.getSimilarCandidates(targetProduct.category, targetProduct.id, {
       minPrice,
       maxPrice,
       color,
@@ -4049,7 +4053,7 @@ app.post('/api/similar', (req, res) => {
  * Aggregates observed extension traffic, estimated visitor uplift, and
  * 7-Day Store-Wide Price Volatility.
  */
-app.post('/api/store-insights', (req, res) => {
+app.post('/api/store-insights', async (req, res) => {
   try {
     const { url, domain } = req.body;
     let targetDomain = domain;
@@ -4061,7 +4065,7 @@ app.post('/api/store-insights', (req, res) => {
       }
     }
 
-    const insights = db.getStoreOverview(targetDomain || 'japam.in');
+    const insights = await db.getStoreOverview(targetDomain || 'japam.in');
 
     res.json({
       success: true,
@@ -4076,13 +4080,13 @@ app.post('/api/store-insights', (req, res) => {
  * POST /api/notifications/subscribe
  * Registers browser push subscription for a user & product
  */
-app.post('/api/notifications/subscribe', (req, res) => {
+app.post('/api/notifications/subscribe', async (req, res) => {
   try {
     const { user_email, product_id, endpoint, p256dh, auth } = req.body;
     if (!endpoint) {
       return res.status(400).json({ error: 'Missing push subscription endpoint' });
     }
-    const subId = db.savePushSubscription({ user_email, product_id, endpoint, p256dh, auth });
+    const subId = await db.savePushSubscription({ user_email, product_id, endpoint, p256dh, auth });
     res.json({ success: true, message: 'Browser push notification subscription registered', subId });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4093,12 +4097,12 @@ app.post('/api/notifications/subscribe', (req, res) => {
  * POST /api/notifications/test-alert
  * Triggers a live test browser notification payload for a product
  */
-app.post('/api/notifications/test-alert', (req, res) => {
+app.post('/api/notifications/test-alert', async (req, res) => {
   try {
     const { product_id, title, price, drop_amount } = req.body;
     let prod = null;
     if (product_id) {
-      prod = db.getProductById(product_id);
+      prod = await db.getProductById(product_id);
     }
 
     const alertPayload = {
@@ -4119,9 +4123,9 @@ app.post('/api/notifications/test-alert', (req, res) => {
 /**
  * GET /api/health-status
  */
-app.get('/api/health-status', (req, res) => {
+app.get('/api/health-status', async (req, res) => {
   try {
-    const logs = db.getLatestHealthLogs(10);
+    const logs = await db.getLatestHealthLogs(10);
     const lastLog = logs[0] || {
       status: 'healthy',
       message: 'Store-specific Scraper Studio Collector operational across 9/9 product fields',
@@ -4144,7 +4148,7 @@ app.get('/api/health-status', (req, res) => {
 /**
  * POST /api/watch & POST /api/watchlist
  */
-function handleWatchlistSubscription(req, res) {
+async function handleWatchlistSubscription(req, res) {
   try {
     let { product_id, url, email, target_price, user_id, visitor_id } = req.body;
     user_id = user_id || visitor_id || null;
@@ -4153,18 +4157,18 @@ function handleWatchlistSubscription(req, res) {
     }
 
     if (!product_id && url) {
-      const prod = db.getProductByUrl(url);
+      const prod = await db.getProductByUrl(url);
       if (prod) {
         product_id = prod.id;
       } else {
-        const all = db.getAllProducts();
+        const all = await db.getAllProducts();
         const matched = all.find(p => p.url === url) || all[0];
         product_id = matched ? matched.id : 1;
       }
     }
 
-    const watchId = db.addToWatchlist(product_id || 1, email, target_price || null, user_id);
-    const userToken = db.getOrCreateUserToken(email);
+    const watchId = await db.addToWatchlist(product_id || 1, email, target_price || null, user_id);
+    const userToken = await db.getOrCreateUserToken(email);
 
     res.json({
       success: true,
@@ -4185,21 +4189,21 @@ app.post('/api/watchlist', handleWatchlistSubscription);
 /**
  * POST /api/watchlist/unsubscribe
  */
-app.post('/api/watchlist/unsubscribe', (req, res) => {
+app.post('/api/watchlist/unsubscribe', async (req, res) => {
   try {
     let { product_id, url, email, token, user_id, visitor_id } = req.body;
     user_id = user_id || visitor_id || null;
-    const resolvedEmail = (token ? db.getEmailByToken(token) : email) || '';
+    const resolvedEmail = (token ? await db.getEmailByToken(token) : email) || '';
     if (!resolvedEmail) {
       return res.status(400).json({ error: 'Missing email or valid token' });
     }
 
     if (!product_id && url) {
-      const prod = db.getProductByUrl(url);
+      const prod = await db.getProductByUrl(url);
       if (prod) product_id = prod.id;
     }
 
-    db.removeFromWatchlist(product_id || 1, resolvedEmail, user_id);
+    await db.removeFromWatchlist(product_id || 1, resolvedEmail, user_id);
     res.json({
       success: true,
       message: `Successfully unsubscribed from price alerts.`
@@ -4212,11 +4216,11 @@ app.post('/api/watchlist/unsubscribe', (req, res) => {
 /**
  * GET /api/watchlist/user
  */
-app.get('/api/watchlist/user', (req, res) => {
+app.get('/api/watchlist/user', async (req, res) => {
   try {
     const { email, token, user_id, visitor_id } = req.query;
-    const resolvedEmail = (token ? db.getEmailByToken(token) : email) || null;
-    const items = db.getUserWatchlist(resolvedEmail, user_id || visitor_id || null);
+    const resolvedEmail = (token ? await db.getEmailByToken(token) : email) || null;
+    const items = await db.getUserWatchlist(resolvedEmail, user_id || visitor_id || null);
     res.json({ success: true, count: items.length, items });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4226,15 +4230,15 @@ app.get('/api/watchlist/user', (req, res) => {
 /**
  * POST /api/watchlist/batch-update
  */
-app.post('/api/watchlist/batch-update', (req, res) => {
+app.post('/api/watchlist/batch-update', async (req, res) => {
   try {
     const { email, token, active_product_ids = [] } = req.body;
-    const resolvedEmail = (token ? db.getEmailByToken(token) : email) || '';
+    const resolvedEmail = (token ? await db.getEmailByToken(token) : email) || '';
     if (!resolvedEmail) {
       return res.status(400).json({ error: 'Missing email or valid subscriber token' });
     }
 
-    db.batchUpdateWatchlist(resolvedEmail, active_product_ids);
+    await db.batchUpdateWatchlist(resolvedEmail, active_product_ids);
     res.json({
       success: true,
       message: `Alert preferences updated. ${active_product_ids.length} active subscription(s) retained.`,

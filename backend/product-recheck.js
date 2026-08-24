@@ -1,4 +1,4 @@
-const db = require('./db');
+const db = require('./db-loader');
 const brightdata = require('./brightdata');
 const { notifyPriceDrop } = require('./price-alerts');
 
@@ -96,15 +96,15 @@ async function recheckProduct(product, { source = 'Product Recheck' } = {}) {
   if (compareChanged) updatedProduct.compare_at_price = liveCompare;
 
   if (titleChanged || priceChanged || compareChanged) {
-    db.saveProduct(updatedProduct);
+    await db.saveProduct(updatedProduct);
   }
 
   // A valid live response advances the 24-hour product-check timestamp even
   // when all three values are unchanged.
-  if (db.touchProductChecked) db.touchProductChecked(product.id);
+  if (db.touchProductChecked) await db.touchProductChecked(product.id);
 
   const savedProduct = titleChanged || priceChanged || compareChanged
-    ? (db.getProductById(product.id) || updatedProduct)
+    ? ((await db.getProductById(product.id)) || updatedProduct)
     : product;
 
   if (titleChanged) {
@@ -122,9 +122,9 @@ async function recheckProduct(product, { source = 'Product Recheck' } = {}) {
 
   if (titleChanged || priceChanged || compareChanged) {
     const domain = new URL(product.url).hostname.replace(/^www\./, '');
-    const activeCollector = db.getStoreById(product.store_id)?.collector_id || 'store-collector-pending';
+    const activeCollector = (await db.getStoreById(product.store_id))?.collector_id || 'store-collector-pending';
     if (db.logHealthEvent) {
-      db.logHealthEvent(
+      await db.logHealthEvent(
         activeCollector,
         domain,
         'healthy',

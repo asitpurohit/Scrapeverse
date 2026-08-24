@@ -7,7 +7,7 @@
  * - If Name changed: updates name in DB
  */
 
-const db = require('./db');
+const db = require('./db-loader');
 const { recheckProduct } = require('./product-recheck');
 
 class BackgroundAutoScraper {
@@ -55,7 +55,7 @@ class BackgroundAutoScraper {
 
     try {
       // Fetch ONLY products with active alerts that have NOT been visited/checked in the last 24 hours
-      const alertProducts = db.getWatchedProductsNeeding24hCheck ? db.getWatchedProductsNeeding24hCheck() : [];
+      const alertProducts = db.getWatchedProductsNeeding24hCheck ? await db.getWatchedProductsNeeding24hCheck() : [];
       if (!alertProducts || alertProducts.length === 0) {
         console.log('ℹ️ [Auto-Scraper 24h] All alert products are up-to-date within the 24h window (0 products need scraping).');
         this.isRunning = false;
