@@ -4,11 +4,12 @@
 
 ScrapeVerse is a Chrome shopping companion that brings verified product data, price history, review intelligence, brand reputation, and collector health signals directly onto e-commerce product pages.
 
-It combines a Manifest V3 browser extension with an Express backend, Bright Data Web Unlocker, Bright Data Scraper Studio, Judge.me review extraction, live web search, an optional LLM analysis layer, and a persistent SQLite data model.
+It combines a Manifest V3 browser extension with an Express backend, Bright Data Web Unlocker, Bright Data Scraper Studio, Judge.me review extraction, live web search, an optional LLM analysis layer, and a database adapter that supports SQLite locally and Supabase PostgreSQL in production.
 
 ## Hackathon demo
 
 - Live backend and marketing page: <https://scrapeverse.onrender.com>
+- Downloadable extension ZIP: <https://scrapeverse.onrender.com/downloads/scrapeverse-extension.zip>
 - Self-healing test store: <https://jolly-crepe-84310b.netlify.app/>
 - History hub: <https://scrapeverse.onrender.com/history>
 - Developer dashboard: <https://scrapeverse.onrender.com/admin>
@@ -56,12 +57,12 @@ Chrome extension (content script + service worker)
 Express backend
   |       |        |          |             |
   v       v        v          v             v
-SQLite  Bright   Judge.me   LLM        Email alerts
-        Data      reviews   analysis   via Resend
-        |         |
-        |         +--> Web Unlocker fetches product HTML/widget data
-        +--> Store-specific Scraper Studio collectors
-             +--> automatic self-healing after extraction failures
+SQLite / Postgres  Bright   Judge.me   LLM   Email alerts
+(adapter)          Data     reviews   analysis via Resend
+                   |        |
+                   |        +--> Web Unlocker fetches product HTML/widget data
+                   +--> Store-specific Scraper Studio collectors
+                        +--> automatic self-healing after extraction failures
 ```
 
 ### Repository layout
@@ -69,7 +70,11 @@ SQLite  Bright   Judge.me   LLM        Email alerts
 ```text
 backend/
   server.js           Express routes, pages, orchestration, health APIs
-  db.js               SQLite schema, migrations, queries, history, alerts
+  db.js               SQLite schema and local queries
+  db-postgres.js      Supabase PostgreSQL implementation with the same app API
+  db-loader.js        Selects SQLite locally or PostgreSQL in production
+  postgres-schema.sql Supabase PostgreSQL schema
+  migrate-sqlite-to-postgres.js  Guarded local-data migration utility
   brightdata.js       collectors, Web Unlocker, Judge.me, search, healing
   product-recheck.js  cached product rechecks and price updates
   price-alerts.js     price-drop notification workflow
@@ -95,7 +100,7 @@ extension/
 5. The API returns a `202 collector_provisioning` response while the collector is being created. The extension polls status and keeps the user informed.
 6. Once ready, the collector extracts the core product fields.
 7. The backend validates product ID, title, price, and currency before saving the result.
-8. The product and price observation are persisted to SQLite.
+8. The product and price observation are persisted through the active database adapter.
 9. The extension receives the verified product response immediately.
 10. Enrichment runs in the background so review and reputation work does not block the first product response.
 
@@ -170,7 +175,7 @@ The reputation feature is designed to show evidence and source links rather than
 
 ## Data and persistence
 
-The backend uses SQLite with tables for:
+The database adapter uses the same tables in SQLite locally or Supabase PostgreSQL in production for:
 
 - stores and store-specific collector state;
 - products and price history;
@@ -181,19 +186,20 @@ The backend uses SQLite with tables for:
 - watchlists and price alerts;
 - user email tokens and reputation cache.
 
-Local development defaults to:
+Local development defaults to SQLite:
 
 ```text
 backend/scrape_verse.db
 ```
 
-Render production uses:
+Production uses Supabase PostgreSQL by setting:
 
 ```text
-SQLITE_DB_PATH=/var/data/scrape_verse.db
+DATABASE_DRIVER=postgres
+DATABASE_URL=<Supabase session-pooler URI>
 ```
 
-with a persistent Render disk mounted at `/var/data`. Without a persistent disk, a Render restart can remove SQLite data.
+The application preserves the same database function interface across both drivers, so scraper, review, reputation, history, and alert workflows do not need separate business logic. The repository includes `postgres-schema.sql` and a guarded `migrate-sqlite-to-postgres.js` utility for moving existing local records to Supabase.
 
 ## Local development
 
@@ -223,6 +229,13 @@ Load the extension:
 
 The extension uses localhost first and automatically falls back to Render when the local health check is unavailable. This lets judges test the public deployment without requiring a local server, while developers can work offline against their local backend.
 
+To test PostgreSQL locally after configuring `backend/.env`:
+
+```bash
+cd backend
+DATABASE_DRIVER=postgres npm start
+```
+
 ## Render deployment
 
 Create a Render **Web Service** connected to this GitHub repository:
@@ -238,6 +251,8 @@ Recommended environment variables:
 
 ```text
 NODE_VERSION=22
+DATABASE_DRIVER=postgres
+DATABASE_URL=<Supabase session-pooler URI>
 BRIGHTDATA_API_KEY=<secret>
 LLM_BASE_URL=<optional>
 LLM_API_KEY=<secret>
@@ -245,10 +260,9 @@ LLM_MODEL=<optional>
 LLM_PROVIDER=<provider>
 RESEND_API_KEY=<secret>
 RESEND_FROM_EMAIL=ScrapeVerse Alerts <sender>
-SQLITE_DB_PATH=/var/data/scrape_verse.db
 ```
 
-Never commit `.env`, API keys, or SQLite files. Use Render Environment Variables or a secret file. The repository contains only `.env.example` as a safe template.
+Render automatically supplies `PORT`; the service should use `Root Directory: backend`, `Build Command: npm install`, and `Start Command: npm start`. Do not commit `.env`, API keys, connection strings, or SQLite files. Use Render Environment Variables or a secret file. The repository contains only `.env.example` as a safe template.
 
 ## Useful routes
 
@@ -308,7 +322,7 @@ Never commit `.env`, API keys, or SQLite files. Use Render Environment Variables
 
 - Live scraping and LLM enrichment require valid provider credentials and can take longer on a first visit.
 - Judge.me extraction is specific to stores exposing Judge.me widget markers and Shopify product metadata.
-- SQLite on Render requires a persistent disk for durable production data.
+- Local SQLite remains useful for offline development; Render production uses Supabase PostgreSQL and does not require a Render disk for the application database.
 - Public deployment should add stronger authentication, rate limiting, and usage controls before broad commercial release.
 - The extension is currently distributed as an unpacked Chrome extension; Chrome Web Store packaging and review are separate release steps.
 
