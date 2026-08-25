@@ -205,22 +205,51 @@ function scheduleStoreCollectorProvisioning(storeId, domain, platform, sampleUrl
     }
 
     storeCollectorPhases.set(storeId, 'collector_creation');
+    let provisioningStage = 'collector_creation';
     try {
-      const created = await brightdata.createStoreCollector(sampleUrl, domain, platform);
-      if (!created?.collector_id) throw new Error('Bright Data did not return a collector ID');
+      let created;
+      try {
+        created = await brightdata.createStoreCollector(sampleUrl, domain, platform);
+        if (!created?.collector_id) throw new Error('Bright Data did not return a collector ID');
+      } catch (error) {
+        throw new Error(`Bright Data collector creation failed: ${error.message}`);
+      }
+
       // Verify the generated collector against the first product before
       // exposing the store as ready to browser clients.
+      provisioningStage = 'product_verification';
       storeCollectorPhases.set(storeId, 'verification_scraping');
-      await brightdata.scrapeProductPage(sampleUrl, created.collector_id);
-      await db.markStoreCollectorReady(storeId, created.collector_id);
+      try {
+        await brightdata.scrapeProductPage(sampleUrl, created.collector_id);
+      } catch (error) {
+        throw new Error(`Product verification failed: ${error.message}`);
+      }
+
+      provisioningStage = 'supabase_persist';
+      try {
+        await db.markStoreCollectorReady(storeId, created.collector_id);
+      } catch (error) {
+        throw new Error(`Supabase collector save failed: ${error.message}`);
+      }
+
       storeCollectorPhases.delete(storeId);
       console.log(`[Store Collector] ✅ Ready for ${domain} (${platform}): ${created.collector_id}`);
     } catch (error) {
       storeCollectorPhases.delete(storeId);
-      const current = await db.getStoreById(storeId);
+      const detailedError = error.message || `${provisioningStage} failed`;
+      let current = null;
+      try {
+        current = await db.getStoreById(storeId);
+      } catch (dbError) {
+        console.error(`[Store Collector] Could not read Supabase store state after ${provisioningStage} failure: ${dbError.message}`);
+      }
       const delay = collectorRetryDelay(current?.collector_attempts || 1);
-      await db.markStoreCollectorFailure(storeId, error.message, delay);
-      console.warn(`[Store Collector] Creation failed for ${domain} (${platform}); retrying in ${Math.round(delay / 1000)}s: ${error.message}`);
+      try {
+        await db.markStoreCollectorFailure(storeId, detailedError, delay);
+      } catch (dbError) {
+        console.error(`[Store Collector] Could not persist failure state after ${provisioningStage} failure: ${dbError.message}`);
+      }
+      console.warn(`[Store Collector] ${detailedError}; retrying in ${Math.round(delay / 1000)}s`);
       const timer = setTimeout(() => {
         storeCollectorProvisionJobs.delete(storeId);
         scheduleStoreCollectorProvisioning(storeId, domain, platform, sampleUrl);
