@@ -1,7 +1,9 @@
 // Background service worker
 importScripts('backend-config.js');
 
-let activeBackendUrl = LOCAL_BACKEND_URL;
+// Prefer local development when it is healthy, but keep the live Render
+// backend as the safe fallback when local is unavailable.
+let activeBackendUrl = REMOTE_BACKEND_URL;
 let backendResolution;
 
 async function resolveBackendUrl() {
