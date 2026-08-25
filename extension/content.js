@@ -1169,7 +1169,7 @@ const backendUrlReady = new Promise((resolve) => {
                       🌐 30-Day Open-Web Brand Standing & Scam Radar
                     </span>
                     <span id="sv-brand-scam-badge" style="font-size:10px;background:var(--sv-primary-soft);color:var(--sv-primary);font-weight:700;padding:2px 8px;border-radius:var(--sv-radius-full);border:1px solid var(--sv-border);">
-                      🛡️ 94% Brand Trust
+                      ⚡ Checking brand trust...
                     </span>
                   </div>
                   <span id="sv-brand-cache-meta" style="font-size:9px;color:var(--sv-text-muted);">⚡ 30-Day Intelligence Cache</span>
@@ -1492,7 +1492,7 @@ const backendUrlReady = new Promise((resolve) => {
                       🌐 30-Day Open-Web Brand Standing & Scam Radar
                     </span>
                     <span id="sv-store-scam-badge" style="font-size:10px;background:var(--sv-primary-soft);color:var(--sv-primary);font-weight:700;padding:2px 8px;border-radius:var(--sv-radius-full);border:1px solid var(--sv-border);">
-                      🛡️ 94% Brand Trust
+                      ⚡ Checking brand trust...
                     </span>
                   </div>
                   <span id="sv-store-cache-meta" style="font-size:9px;color:var(--sv-text-muted);">⚡ 30-Day Intelligence Cache</span>
@@ -1579,9 +1579,9 @@ const backendUrlReady = new Promise((resolve) => {
 
           const rep = json.reputation;
           const trustPill = bannerEl.querySelector('#sv-store-trust-pill');
-          const brandBadge = bannerEl.querySelector('#sv-store-brand-badge');
+          const brandBadge = bannerEl.querySelector('#sv-store-scam-badge');
           const summaryEl = bannerEl.querySelector('#sv-store-ai-summary');
-          const sourcesList = bannerEl.querySelector('#sv-store-brand-sources');
+          const sourcesList = bannerEl.querySelector('#sv-store-sources-list');
           const trustState = getBrandTrustState(rep);
 
           if (trustPill) {
