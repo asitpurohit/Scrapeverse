@@ -182,7 +182,7 @@ function scrapeWithBrightDataUnlocker(targetUrl, { rawOnly = false } = {}) {
     const cmd = `${BRIGHTDATA_CLI} scrape -k ${API_KEY} "${targetUrl}" --format json`;
     console.log(`[Bright Data Web Unlocker] Proxying request through Bright Data zone for ${targetUrl}...`);
     
-    exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 35000 }, (error, stdout, stderr) => {
+    exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 240000 }, (error, stdout, stderr) => {
       if (error) {
         console.warn('[Bright Data Web Unlocker Error]:', error.message);
         return reject(error);
@@ -527,7 +527,7 @@ function parseBrightDataCliJson(stdout = '') {
   }
 }
 
-function runBrightDataCli(args, timeout = 30000) {
+function runBrightDataCli(args, timeout = 240000) {
   return new Promise((resolve) => {
     execFile(BRIGHTDATA_CLI, args, { maxBuffer: 10 * 1024 * 1024, timeout }, (error, stdout, stderr) => {
       if (error) {
@@ -1458,7 +1458,7 @@ function searchWithBrightData(query) {
     const cmd = `${BRIGHTDATA_CLI} search -k ${API_KEY} "${cleanQuery}" --json`;
     console.log(`[Bright Data SERP Search] 🌐 Searching live web discussions for "${cleanQuery}"...`);
 
-    exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 25000 }, (error, stdout) => {
+    exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 240000 }, (error, stdout) => {
       if (error) {
         console.warn('[Bright Data Search Notice]:', error.message);
         return resolve([]);
