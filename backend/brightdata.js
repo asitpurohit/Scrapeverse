@@ -53,7 +53,7 @@ function runScraperViaCli(collectorId, url) {
       resolve(dataset);
     };
     
-    exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 35000 }, (error, stdout, stderr) => {
+    exec(cmd, { maxBuffer: 10 * 1024 * 1024, timeout: 240000 }, (error, stdout, stderr) => {
       if (error) {
         console.warn('[Bright Data CLI Scraper error]:', error.message);
         return resolve(null);
